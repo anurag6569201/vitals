@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 enum MenuBarStyle: String, Codable, CaseIterable, Identifiable {

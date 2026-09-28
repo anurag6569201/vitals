@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 /// Turns a stream of snapshots into a small, stable list of issues.

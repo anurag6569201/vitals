@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 /// Plain-English notes about macOS processes people see and worry about.

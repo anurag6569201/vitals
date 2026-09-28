@@ -1,3 +1,4 @@
+import Combine
 import AppKit
 import Darwin
 import Foundation
@@ -152,7 +153,7 @@ final class ProcessSampler {
         if processName.hasPrefix("Process "), let fallbackName { processName = fallbackName }
         let known = Knowledge.lookup(processName)
         return AppIdentity(key: "proc:\(processName)", name: known?.friendlyName ?? processName,
-                           bundlePath: nil, bundleID: nil, isSystem: executablePath.map(isSystemPath) ?? true)
+                           bundlePath: nil, bundleID: nil, isSystem: executablePath.map { isSystemPath($0) } ?? true)
     }
 
     static func isSystemPath(_ path: String) -> Bool {

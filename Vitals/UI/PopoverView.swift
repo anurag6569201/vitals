@@ -1,3 +1,4 @@
+import Combine
 import AppKit
 import SwiftUI
 
@@ -259,7 +260,7 @@ private struct VitalsGrid: View {
             } else {
                 Tile(symbol: "powerplug", title: "Power", value: "AC", caption: "No battery")
             }
-            Tile(symbol: "internaldrive", title: "Disk", value: snapshot.diskFreeBytes.map(Format.diskBytes) ?? "—",
+            Tile(symbol: "internaldrive", title: "Disk", value: snapshot.diskFreeBytes.map { Format.diskBytes($0) } ?? "—",
                  caption: "free", fraction: diskUsedFraction)
             Tile(symbol: "arrow.down.circle", title: "Network", value: Format.rate(snapshot.downloadRate),
                  caption: "↑ \(Format.rate(snapshot.uploadRate))")
