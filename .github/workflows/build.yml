@@ -1,0 +1,19 @@
+name: Build
+
+on:
+  push:
+    branches: [main, "pivot/**"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+      - name: Build (unsigned)
+        run: |
+          xcodebuild -project Vitals.xcodeproj -scheme Vitals -configuration Debug \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" build
