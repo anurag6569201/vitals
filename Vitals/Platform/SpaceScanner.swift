@@ -519,6 +519,31 @@ final class SpaceModel: ObservableObject {
 
     var isScanning: Bool { !scanning.isEmpty }
 
+    private let launchDate = Date()
+    private var lastBackgroundScan: Date?
+    private static let openedKey = "vitals.space.opened"
+
+    /// Folders like Downloads and Desktop trigger a macOS permission prompt, so they're only
+    /// scanned in the background after the person has opened Free Up Space themselves.
+    var hasOpenedTool: Bool { UserDefaults.standard.bool(forKey: Self.openedKey) }
+
+    func markOpened() {
+        UserDefaults.standard.set(true, forKey: Self.openedKey)
+    }
+
+    /// Once a day, while plugged in, quietly refresh the cheap categories so the popover
+    /// can say how much space is waiting to be freed.
+    func backgroundRefreshIfDue(onAC: Bool) {
+        guard onAC, !isScanning, Date().timeIntervalSince(launchDate) > 300 else { return }
+        if let last = [lastScan, lastBackgroundScan].compactMap({ $0 }).max(),
+           Date().timeIntervalSince(last) < 86_400 { return }
+        lastBackgroundScan = Date()
+        let categories: [SpaceCategory] = hasOpenedTool
+            ? [.bigFiles, .downloads, .installers, .screenshots, .caches, .developer, .devices, .trash]
+            : [.caches, .developer, .devices]
+        for category in categories { scan(category) }
+    }
+
     func total(_ category: SpaceCategory) -> UInt64 {
         (items[category] ?? []).reduce(0) { $0 + $1.bytes }
     }

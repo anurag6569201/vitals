@@ -32,7 +32,10 @@ struct SpaceView: View {
             bottomBar
         }
         .frame(minWidth: 820, minHeight: 560)
-        .onAppear { space.scanIfNeeded() }
+        .onAppear {
+            space.markOpened()
+            space.scanIfNeeded()
+        }
         .confirmationDialog("Move \(space.selectedItems.count) item\(space.selectedItems.count == 1 ? "" : "s") to the Trash?",
                             isPresented: $confirming) {
             Button("Move to Trash (\(Format.diskBytes(space.selectedBytes)))", role: .destructive) { space.trashSelected() }

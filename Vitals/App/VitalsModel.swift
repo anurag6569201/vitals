@@ -92,6 +92,7 @@ final class VitalsModel: ObservableObject {
         if detection != settings.detection { settings.detection = detection }
         if away.isTracking { away.ingest(snap) }
         updateBatteryPlanning(snap)
+        space.backgroundRefreshIfDue(onAC: snap.battery?.isOnAC ?? true)
 
         snapshot = snap
         publishIssues()
@@ -99,15 +100,17 @@ final class VitalsModel: ObservableObject {
     }
 
     private func publishIssues() {
-        issues = engine.visibleIssues
-        lockedIssues = engine.lockedIssues
-        severity = engine.overallSeverity
+        // Only publish real changes: fewer redraws, and no needless updates mid-render.
+        if issues != engine.visibleIssues { issues = engine.visibleIssues }
+        if lockedIssues != engine.lockedIssues { lockedIssues = engine.lockedIssues }
+        if severity != engine.overallSeverity { severity = engine.overallSeverity }
     }
 
     // MARK: Battery planning & leaving check
 
     private func updateBatteryPlanning(_ snap: SystemSnapshot) {
-        forecast = BatteryForecast.make(history: engine.history, typicalRate: settings.detection.typicalDrainPerHour)
+        let newForecast = BatteryForecast.make(history: engine.history, typicalRate: settings.detection.typicalDrainPerHour)
+        if newForecast != forecast { forecast = newForecast }
 
         let onAC = snap.battery?.isOnAC
         defer { wasOnAC = onAC }

@@ -1,7 +1,13 @@
 # Vitals — positioning & launch copy
 
 ## One line
-**Vitals is the check-engine light for your Mac.** Quiet when all is well. Clear when it isn't.
+**Vitals is the check-engine light for your Mac.** Quiet when all is well. Clear when it isn't. And when your disk fills up, it shows you exactly what to clear.
+
+## The two hooks
+1. **"Why is my Mac slow / hot / dead?"** → calm alerts with the app to blame and a one-click fix.
+2. **"Your disk is almost full."** → Free Up Space: large files, duplicates, old downloads, installers,
+   unused apps, caches and developer junk, each explained and cleared safely to the Trash.
+   This is the one most people will pay for first — lead ads, Product Hunt and Reddit with it.
 
 ## Who it's for
 MacBook owners who aren't hardware nerds — students, creators, developers, office workers — who notice
@@ -14,11 +20,14 @@ MacBook owners who aren't hardware nerds — students, creators, developers, off
 | CleanMyMac | Subscription, "junk" scare tactics | One-time price, no cleaning theatre, no fake alarms |
 | Activity Monitor | You must know where to look, and Chrome shows as 40 helpers | Rolls helpers into one app, tells you when and why |
 | Battery-only apps | Only one symptom | Battery, heat, memory, disk, sleep blockers, runaway apps — one icon |
+| Disk "cleaners" | Scare scans, subscriptions, delete things you didn't ask for | Explains every item, never pre-selects your files, only moves to the Trash |
 
 ## Pricing
-- Free forever: health light, runaway-app, heat, memory, disk alerts, live dashboard.
-- **Vitals Pro — $12.99 once** (launch week $9.99): battery-drain culprit, apps keeping your Mac awake,
-  full "While you were away" reports, live readings in the menu bar. 14-day full trial, no account.
+- Free forever: health light, runaway-app, heat, memory, disk alerts, live dashboard, and a full Free Up Space scan.
+- **Vitals Pro — $12.99 once** (launch week $9.99): one-click clearing in Free Up Space, battery-drain culprit,
+  "Will my battery last?" planner, Leaving Check, apps keeping your Mac awake, full "While you were away"
+  reports, live readings in the menu bar. 14-day full trial, no account.
+- The free scan showing "38 GB found" is the upgrade moment: the value is visible before the paywall.
 
 ## Website hero
 > **Your Mac, without the guesswork.**
@@ -44,6 +53,9 @@ one-click fix. After you unlock your Mac it can tell you what happened while you
 it awake"). Free, Pro is a one-time $12.99 (no subscription), nothing leaves your Mac. Feedback very welcome!
 
 ## SEO articles for the site (each ends with "Vitals catches this automatically")
+0. "Your disk is almost full" on Mac — what's actually taking the space (and what's safe to delete)
+0. How to find duplicate files on a Mac without a sketchy cleaner
+0. Is it safe to delete Xcode DerivedData / ~/Library/Caches?
 1. Why is my MacBook fan so loud? (and how to find the app causing it)
 2. My Mac battery died overnight while it was asleep — here's why
 3. What is kernel_task and why is it using so much CPU?
@@ -57,6 +69,7 @@ Vitals quietly watches your Mac's health — heat, memory, battery, disk and run
 something needs you, with a plain-English explanation and a one-click fix.
 
 ## Screenshots to capture (1280×800)
+0. Free Up Space window: sidebar with category sizes, Duplicates selected, "KEEP" badge visible.
 1. Calm: menu bar pulse + popover "Your Mac is healthy" with the vitals grid.
 2. Alert: orange pulse + "Chrome 180%" in the menu bar + the issue card with **Quit Chrome**.
 3. "While you were away" card with the energy breakdown.

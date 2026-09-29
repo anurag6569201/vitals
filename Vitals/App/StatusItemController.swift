@@ -43,10 +43,11 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     func showPopover() {
         guard let button = statusItem.button, !popover.isShown else { return }
-        model.isPopoverOpen = true
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
         NSApp.activate()
+        // Refresh after the popover has laid out, never during a SwiftUI update pass.
+        DispatchQueue.main.async { [weak self] in self?.model.isPopoverOpen = true }
     }
 
     @objc private func toggle(_ sender: Any?) {
@@ -54,7 +55,9 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     }
 
     nonisolated func popoverDidClose(_ notification: Notification) {
-        MainActor.assumeIsolated { model.isPopoverOpen = false }
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated { self?.model.isPopoverOpen = false }
+        }
     }
 
     private func openSettings(_ tab: SettingsTab) {

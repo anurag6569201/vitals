@@ -39,6 +39,10 @@ Things marked **you** need your accounts, money or identity; everything else is 
 - [ ] `caffeinate -i` running while locked on battery for 15 min → "caffeinate is keeping your Mac awake".
 - [ ] Trial countdown, license activation with a Lemon Squeezy test-mode key, deactivation.
 - [ ] Light + dark menu bar; notch MacBook with many icons (macOS 27 overflow chevron keeps Vitals reachable).
+- [ ] Free Up Space: open from the popover; allow the Downloads/Desktop/Documents prompts; every category
+      finishes; select an item → Move to Trash → it appears in the Trash and can be put back.
+- [ ] Duplicates: copy a 50 MB file to two folders → both show, newest marked KEEP, the other pre-selected.
+- [ ] App icon shows in Finder, the Dock (while Settings is open) and the About tab.
 - [ ] Energy check: Vitals itself should sit well under 1% CPU in Activity Monitor when the popover is closed.
 
 ## 5. Distribution channels (in order)
