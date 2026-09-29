@@ -102,26 +102,27 @@ struct LeavingCheckCard: View {
     }
 }
 
-/// Shortcuts to the bigger tools.
+/// Shortcut to Free Up Space.
 struct ToolsRow: View {
-    let openReceipt: () -> Void
+    @ObservedObject var space: SpaceModel
     let openSpace: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            tool("Battery receipt", symbol: "receipt", action: openReceipt)
-            tool("Space hogs", symbol: "externaldrive.badge.minus", action: openSpace)
-        }
-    }
-
-    private func tool(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: symbol)
-                .font(.system(size: 12, weight: .medium))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 7)
-                .background(Color(nsColor: .controlBackgroundColor).opacity(0.6), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                .contentShape(Rectangle())
+        Button(action: openSpace) {
+            HStack {
+                Label("Free up space", systemImage: "externaldrive.badge.minus")
+                    .font(.system(size: 12, weight: .medium))
+                Spacer()
+                if space.reviewableTotal > 0 {
+                    Text("\(Format.diskBytes(space.reviewableTotal)) found")
+                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                }
+                Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(Color(nsColor: .controlBackgroundColor).opacity(0.6), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

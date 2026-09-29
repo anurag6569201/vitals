@@ -20,7 +20,6 @@ final class VitalsModel: ObservableObject {
 
     let license: LicenseManager
     let updates = UpdateChecker()
-    let ledger = UsageLedger()
     let space = SpaceModel()
     var openWindow: ((AppWindow) -> Void)?
     private var wasOnAC: Bool?
@@ -92,7 +91,6 @@ final class VitalsModel: ObservableObject {
         let newlyVisible = engine.ingest(snap, settings: &detection, isPro: license.isPro)
         if detection != settings.detection { settings.detection = detection }
         if away.isTracking { away.ingest(snap) }
-        ledger.record(snap)
         updateBatteryPlanning(snap)
 
         snapshot = snap
@@ -159,7 +157,6 @@ final class VitalsModel: ObservableObject {
             away.begin(at: now, battery: sampler.batteryState())
         } else if !isAway && wasAway {
             if let report = away.end(at: now, battery: sampler.batteryState()), settings.awayReportsEnabled {
-                ledger.record(report)
                 awayReports.insert(report, at: 0)
                 AwayReportStore.save(awayReports)
                 if report.verdict == .unusual && settings.notificationsEnabled {

@@ -210,7 +210,7 @@ enum IssueAction: String, Codable, Hashable {
         case .openStorageSettings: "Manage Storage"
         case .openBatterySettings: "Battery Settings"
         case .showAwayReport: "See report"
-        case .findSpaceHogs: "Find space hogs"
+        case .findSpaceHogs: "Free up space"
         }
     }
 }

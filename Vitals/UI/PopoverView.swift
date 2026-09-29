@@ -50,8 +50,7 @@ struct PopoverView: View {
 
             if let snapshot = model.snapshot {
                 VitalsGrid(snapshot: snapshot)
-                ToolsRow(openReceipt: { model.openWindow?(.receipt) },
-                         openSpace: { model.openWindow?(.space) })
+                ToolsRow(space: model.space, openSpace: { model.openWindow?(.space) })
                 TopAppsSection(snapshot: snapshot, quit: { model.quit($0) })
             }
 

@@ -13,10 +13,9 @@ When something actually needs you, it says what's wrong in plain English and off
 - **Low disk space** and a gentle **restart reminder**.
 - **While you were away** *(Pro)* — after you unlock: "Away 7h 12m · lost 23% — more than it should. Your Mac never slept: Zoom kept it awake."
 
-- **Battery Receipt** — a shareable, receipt-style card of what each app cost you today ("THANK YOU FOR CHOOSING CHROME"). Copy, save or share as an image. Extra paper styles in Pro.
 - **Will my battery last?** *(Pro)* — when you'll run out, and the smallest set of apps to quit to make it to the time you need.
 - **Leaving Check** *(Pro)* — right after you unplug, warns if an app would keep your Mac awake and hot in your bag.
-- **Space Hogs** — finds big rebuildable caches (Xcode DerivedData, simulators, npm/Homebrew/pip caches, old `node_modules`, Rust `target`…) and clears them to the Trash in one click *(clearing is Pro)*.
+- **Free Up Space** — finds what's eating your disk, for everyone, not just developers: large files (with last-opened dates), old downloads, installers and already-unzipped archives, old screenshots and recordings, true duplicates (verified by full hash), apps you haven't opened in 3 months, app caches and leftovers of deleted apps, developer junk, old iPhone updates, and the Trash. Everything goes to the Trash, never straight to deletion. Reviewing is free; one-click clearing is Pro.
 
 Plus a compact live dashboard (CPU, memory, battery draw, disk, network, uptime) and the apps using your Mac right now.
 

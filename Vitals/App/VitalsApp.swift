@@ -47,10 +47,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
-        model?.ledger.save()
-    }
-
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     /// Accessory apps have no visible menu, but text fields still need ⌘C / ⌘V / ⌘A.
@@ -90,7 +86,6 @@ final class WindowManager {
     private let model: VitalsModel
     private var settingsWindow: NSWindow?
     private var onboardingWindow: NSWindow?
-    private var receiptWindow: NSWindow?
     private var spaceWindow: NSWindow?
     private let settingsRouter = SettingsRouter()
 
@@ -115,26 +110,19 @@ final class WindowManager {
     func show(_ window: AppWindow) {
         switch window {
         case .settings(let tab): showSettings(tab: tab)
-        case .receipt: showReceipt()
         case .space: showSpace()
         }
     }
 
-    func showReceipt() {
-        if receiptWindow == nil {
-            let view = ReceiptWindowView(model: model, license: model.license,
-                                         upgrade: { [weak self] in self?.showSettings(tab: .pro) })
-            receiptWindow = makeWindow(NSHostingController(rootView: view), title: "Battery Receipt")
-        }
-        present(receiptWindow)
-    }
-
     func showSpace() {
         if spaceWindow == nil {
-            let view = SpaceView(space: model.space, license: model.license,
-                                 freeBytes: model.snapshot?.diskFreeBytes,
+            let view = SpaceView(space: model.space, license: model.license, model: model,
                                  upgrade: { [weak self] in self?.showSettings(tab: .pro) })
-            spaceWindow = makeWindow(NSHostingController(rootView: view), title: "Space Hogs")
+            let window = makeWindow(NSHostingController(rootView: view), title: "Free Up Space")
+            window.styleMask.insert(.resizable)
+            window.setContentSize(NSSize(width: 900, height: 620))
+            window.center()
+            spaceWindow = window
         }
         present(spaceWindow)
     }
@@ -175,7 +163,6 @@ final class WindowManager {
 
 enum AppWindow {
     case settings(SettingsTab)
-    case receipt
     case space
 }
 
