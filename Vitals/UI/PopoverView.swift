@@ -412,7 +412,7 @@ private struct TopAppsSection: View {
                             Text(app.identity.name).font(.system(size: 12)).lineLimit(1)
                             Spacer()
                             if hovered == app.identity.key && app.identity.canQuit {
-                                Button("Quit") { quit(app.identity) }
+                                Button(Edition.canQuitApps ? "Quit" : "Show") { quit(app.identity) }
                                     .controlSize(.mini)
                             }
                             Text(Format.bytes(app.memoryBytes))

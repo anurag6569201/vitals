@@ -19,7 +19,7 @@ final class UpdateChecker: ObservableObject {
     private var lastCheck: Date?
 
     func checkIfNeeded() {
-        guard !SystemSampler.isSandboxed, !Self.feedURL.absoluteString.contains("REPLACE") else { return }
+        guard !Edition.isAppStore, !Self.feedURL.absoluteString.contains("REPLACE") else { return }
         if let lastCheck, Date().timeIntervalSince(lastCheck) < 86_400 { return }
         lastCheck = Date()
         Task {

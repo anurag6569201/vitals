@@ -54,3 +54,33 @@ Things marked **you** need your accounts, money or identity; everything else is 
 2. **Setapp** — apply at setapp.com/developers; they accept non-sandboxed apps and pay per active use.
 3. **Mac App Store "Vitals Lite"** (optional) — sandboxed build: system-wide alerts, heat, memory, disk,
    away reports without per-app blame. Good for discovery; link to the full version from the website.
+
+## Two editions (App Store + direct)
+
+Same code, two builds:
+
+| | Scheme | Archive config | Sandbox | Extra |
+|---|---|---|---|---|
+| **App Store** | `Vitals App Store` | `AppStore` | Yes (`Config/AppStore.entitlements`) | StoreKit purchase + $0 trial item |
+| **Direct (full)** | `Vitals` | `Release` | No | Icon hiding, per-app energy, Quit, whole-Mac scan, Lemon Squeezy |
+
+Code switch: `#if APPSTORE` / `Edition.isAppStore` (App/AppSettings.swift). The App Store build
+contains no private-framework code.
+
+### App Store submission checklist
+1. App Store Connect › Vitals › **In-App Purchases** › create two **Non-Consumable** items:
+   - `com.anuragsingh.vitals.pro` — "Vitals Pro", your price (e.g. $12.99).
+   - `com.anuragsingh.vitals.trial` — "14-Day Free Trial", price **Free**. (Guideline 3.1.1:
+     time-limited trials of non-subscription apps must use a $0 item.)
+   Add a review screenshot for each (Settings › Pro tab).
+2. **App Privacy**: "Data Not Collected".
+3. **Category**: Utilities. Age rating: 4+.
+4. Screenshots (1280×800 or 2880×1800): popover, menu-bar readings with colors, Free Up Space,
+   battery forecast, Settings › Menu Bar.
+5. Privacy policy URL + support URL (the `site/` pages work).
+6. Xcode: scheme **Vitals App Store**, destination **Any Mac**, Product › Archive ›
+   Validate App, then Distribute App › App Store Connect › Upload.
+7. In App Store Connect choose the build, attach both in-app purchases to the version, submit.
+8. Review notes: "Menu-bar utility (LSUIElement). Click the icon in the menu bar to open it.
+   Free Up Space asks the user to choose their home folder (security-scoped bookmark); files
+   are only moved to the Trash on request."

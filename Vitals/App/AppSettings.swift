@@ -98,6 +98,11 @@ enum ReadingKind: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// Readings this edition can show. The sandboxed App Store build can't see other apps' usage.
+    static var available: [ReadingKind] {
+        Edition.isAppStore ? allCases.filter { $0 != .topApp } : allCases
+    }
+
     /// SF Symbol shown in the menu bar instead of a text label.
     var symbol: String {
         switch self {
@@ -212,6 +217,20 @@ enum AwayReportStore {
     static func save(_ reports: [AwayReport]) {
         if let data = try? JSONEncoder().encode(Array(reports.prefix(20))) { UserDefaults.standard.set(data, forKey: key) }
     }
+}
+
+// MARK: - Edition
+
+/// Which build this is. The App Store build is sandboxed: no quitting other apps and no
+/// menu-bar icon hiding (see RELEASE.md › Two editions).
+enum Edition {
+    #if APPSTORE
+    static let isAppStore = true
+    #else
+    static let isAppStore = false
+    #endif
+    static var canQuitApps: Bool { !isAppStore }
+    static var canHideMenuBarIcons: Bool { !isAppStore }
 }
 
 // MARK: - Colors

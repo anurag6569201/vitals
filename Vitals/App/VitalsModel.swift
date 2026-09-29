@@ -145,6 +145,11 @@ final class VitalsModel: ObservableObject {
     }
 
     func quitAll(_ identities: [AppIdentity]) {
+        guard Edition.canQuitApps else {
+            SystemActions.openActivityMonitor()
+            show("Quit \(LeavingCheck.list(identities.map(\.name))) in Activity Monitor.")
+            return
+        }
         var failed: [String] = []
         for identity in identities where !SystemActions.quit(identity) { failed.append(identity.name) }
         if failed.isEmpty {
@@ -229,6 +234,11 @@ final class VitalsModel: ObservableObject {
     }
 
     func quit(_ identity: AppIdentity) {
+        guard Edition.canQuitApps else {
+            SystemActions.openActivityMonitor()
+            show("Quit \(identity.name) in Activity Monitor.")
+            return
+        }
         if SystemActions.quit(identity) {
             show("Asked \(identity.name) to quit.")
         } else {

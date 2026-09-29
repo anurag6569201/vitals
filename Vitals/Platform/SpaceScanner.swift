@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import CoreServices
 import CryptoKit
+import Darwin
 import Foundation
 
 // MARK: - Model
@@ -83,10 +84,69 @@ nonisolated struct SpaceItem: Identifiable, Sendable, Hashable {
     let keep: Bool
 }
 
+// MARK: - Folder access
+
+/// App Store builds are sandboxed: they may only read folders the person chooses. Vitals asks once
+/// for the home folder and remembers the choice with a security-scoped bookmark.
+enum SpaceAccess {
+    nonisolated static var realHome: URL {
+        if let entry = getpwuid(getuid()), let dir = entry.pointee.pw_dir {
+            return URL(fileURLWithPath: String(cString: dir), isDirectory: true)
+        }
+        return FileManager.default.homeDirectoryForCurrentUser
+    }
+
+    #if APPSTORE
+    private static let bookmarkKey = "vitals.space.homeBookmark"
+    private static var accessed: URL?
+
+    static var isGranted: Bool { accessed != nil || restore() }
+
+    @discardableResult
+    static func restore() -> Bool {
+        guard accessed == nil, let data = UserDefaults.standard.data(forKey: bookmarkKey) else { return accessed != nil }
+        var stale = false
+        guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope,
+                                 relativeTo: nil, bookmarkDataIsStale: &stale),
+              url.startAccessingSecurityScopedResource() else { return false }
+        accessed = url
+        if stale, let fresh = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil,
+                                                    relativeTo: nil) {
+            UserDefaults.standard.set(fresh, forKey: bookmarkKey)
+        }
+        return true
+    }
+
+    /// Shows the standard folder picker, opened on the home folder.
+    @discardableResult
+    static func request() -> Bool {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.directoryURL = realHome
+        panel.prompt = "Allow"
+        panel.message = "Choose your home folder (\(realHome.lastPathComponent)) so Vitals can look for files you can clear. Nothing leaves your Mac."
+        NSApp.activate()
+        guard panel.runModal() == .OK, let url = panel.url,
+              let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+        else { return false }
+        accessed?.stopAccessingSecurityScopedResource()
+        accessed = nil
+        UserDefaults.standard.set(data, forKey: bookmarkKey)
+        return restore()
+    }
+    #else
+    static var isGranted: Bool { true }
+    @discardableResult static func request() -> Bool { true }
+    #endif
+}
+
 // MARK: - Scanner
 
 nonisolated enum SpaceScanner {
-    static let home = FileManager.default.homeDirectoryForCurrentUser
+    /// The real home folder. (In a sandboxed build FileManager's home is the app's container.)
+    static let home = SpaceAccess.realHome
     static let month: TimeInterval = 30 * 86_400
 
     static func scan(_ category: SpaceCategory, projectRoot: URL?) -> [SpaceItem] {
@@ -563,13 +623,23 @@ final class SpaceModel: ObservableObject {
         scanAll()
     }
 
+    var hasAccess: Bool { SpaceAccess.isGranted }
+
+    func requestAccess() {
+        if SpaceAccess.request() {
+            objectWillChange.send()
+            scanAll()
+        }
+    }
+
     func scanAll() {
+        guard hasAccess else { return }
         lastScan = Date()
         for category in SpaceCategory.allCases { scan(category) }
     }
 
     func scan(_ category: SpaceCategory) {
-        guard !scanning.contains(category) else { return }
+        guard hasAccess, !scanning.contains(category) else { return }
         scanning.insert(category)
         let root = projectRoot
         Task {

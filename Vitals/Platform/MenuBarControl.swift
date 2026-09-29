@@ -5,6 +5,7 @@ import Foundation
 
 // The macOS 27 restriction bridge is adapted from MenuBarHider by Saveliy Yudin (MIT).
 // See THIRD_PARTY_NOTICES.md. Apple does not publish this API; resolve it at runtime.
+#if !APPSTORE
 @objc private protocol MenuBarAssessmentAssertion {
     @objc(activateWithConfiguration:completionHandler:)
     func activate(with configuration: AnyObject, completionHandler: @escaping (NSError?) -> Void)
@@ -80,6 +81,18 @@ private final class MenuBarVisibilityBridge {
         active = nil
     }
 }
+#else
+/// App Store build: no private frameworks, so icon hiding is unavailable.
+private final class MenuBarVisibilityBridge {
+    var isAvailable: Bool { false }
+    func showOnly(bundleIDs: [String], hiddenSystemIDs: Set<Int>, completion: @escaping (Error?) -> Void) {
+        completion(NSError(domain: "Vitals", code: 1,
+                           userInfo: [NSLocalizedDescriptionKey: "Hiding icons isn't available in the App Store edition."]))
+    }
+    func restoreAll() {}
+}
+#endif
+
 
 struct ControlledMenuApp: Identifiable {
     let id: String // bundle identifier
@@ -254,7 +267,7 @@ final class MenuBarControl: ObservableObject {
     }
 
     func startAfterMenuBarAppears() {
-        guard !hasStarted else { return }
+        guard !hasStarted, isSupported else { return }
         hasStarted = true
         LSRegisterURL(Bundle.main.bundleURL as CFURL, true)
         // Do not start the assessment-mode restriction before AppKit has installed

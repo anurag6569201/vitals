@@ -59,6 +59,7 @@ protocol Detector {
 
 func quitActions(for identity: AppIdentity?) -> [IssueAction] {
     guard let identity else { return [.openActivityMonitor, .snooze] }
+    guard Edition.canQuitApps else { return [.openActivityMonitor, .snooze, .ignoreApp] }
     if identity.canQuit { return [.quitApp, .snooze, .ignoreApp] }
     return [.openActivityMonitor, .snooze, .ignoreApp]
 }

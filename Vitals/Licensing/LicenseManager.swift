@@ -6,6 +6,9 @@ import StoreKit
 enum LicenseConfig {
     /// Mac App Store in-app purchase (non-consumable).
     static let storeKitProductID = "com.anuragsingh.vitals.pro"
+    /// Mac App Store free trial: a $0 non-consumable ("Price: Free") that starts the trial clock,
+    /// as App Review guideline 3.1.1 requires for time-limited trials of non-subscription apps.
+    static let storeKitTrialProductID = "com.anuragsingh.vitals.trial"
     /// Lemon Squeezy checkout link for the direct-download build.
     static let checkoutURL = URL(string: "https://vitals.lemonsqueezy.com/buy/REPLACE-WITH-YOUR-PRODUCT")!
     /// Optional: your Lemon Squeezy store id, to reject keys from other stores.
@@ -27,7 +30,9 @@ final class LicenseManager: ObservableObject {
     @Published var message: String?
     @Published private(set) var storeProduct: Product?
 
-    let usesAppStore = SystemSampler.isSandboxed
+    let usesAppStore = Edition.isAppStore
+    /// App Store edition: whether the free trial can still be started.
+    @Published private(set) var canStartTrial = false
 
     private let defaults = UserDefaults.standard
     private var updatesTask: Task<Void, Never>?
@@ -38,6 +43,7 @@ final class LicenseManager: ObservableObject {
         static let instanceID = "vitals.license.instance"
         static let lastValidated = "vitals.license.lastValidated"
         static let storePro = "vitals.license.storePro"
+        static let storeTrialStart = "vitals.license.storeTrialStart"
     }
 
     var isPro: Bool {
@@ -76,7 +82,12 @@ final class LicenseManager: ObservableObject {
             state = .pro
             return
         }
-        let first = defaults.object(forKey: Keys.firstLaunch) as? Date ?? Date()
+        let trialStart = usesAppStore ? defaults.object(forKey: Keys.storeTrialStart) as? Date
+                                      : defaults.object(forKey: Keys.firstLaunch) as? Date
+        guard let first = trialStart else {
+            state = .free
+            return
+        }
         let used = Int(Date().timeIntervalSince(first) / 86_400)
         let left = LicenseConfig.trialDays - used
         state = left > 0 ? .trial(daysLeft: left) : .free
@@ -179,6 +190,26 @@ final class LicenseManager: ObservableObject {
         }
     }
 
+    /// App Store edition: "buys" the $0 trial item, which starts the 14 days.
+    func startTrial() async {
+        isWorking = true
+        defer { isWorking = false }
+        guard let product = try? await Product.products(for: [LicenseConfig.storeKitTrialProductID]).first else {
+            message = "The App Store isn't available right now."
+            return
+        }
+        do {
+            let result = try await product.purchase()
+            if case .success(let verification) = result, case .verified(let transaction) = verification {
+                await transaction.finish()
+                refreshStoreEntitlement()
+                message = "Your \(LicenseConfig.trialDays)-day trial has started. Everything is unlocked."
+            }
+        } catch {
+            message = "The trial couldn't start. Try again in a moment."
+        }
+    }
+
     func restore() async {
         isWorking = true
         defer { isWorking = false }
@@ -189,14 +220,15 @@ final class LicenseManager: ObservableObject {
     private func refreshStoreEntitlement() {
         Task {
             var owned = false
+            var trialStart: Date?
             for await entitlement in Transaction.currentEntitlements {
-                if case .verified(let transaction) = entitlement,
-                   transaction.productID == LicenseConfig.storeKitProductID,
-                   transaction.revocationDate == nil {
-                    owned = true
-                }
+                guard case .verified(let transaction) = entitlement, transaction.revocationDate == nil else { continue }
+                if transaction.productID == LicenseConfig.storeKitProductID { owned = true }
+                if transaction.productID == LicenseConfig.storeKitTrialProductID { trialStart = transaction.purchaseDate }
             }
             defaults.set(owned, forKey: Keys.storePro)
+            defaults.set(trialStart, forKey: Keys.storeTrialStart)
+            canStartTrial = !owned && trialStart == nil
             refreshState()
         }
     }

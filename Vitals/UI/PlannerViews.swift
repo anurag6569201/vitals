@@ -88,7 +88,9 @@ struct LeavingCheckCard: View {
                 if isPro {
                     Text(check.detail).font(.system(size: 12)).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Button("Quit \(check.all.count == 1 ? Format.shortName(check.all[0].name) : "all \(check.all.count)")", action: quitAll)
+                    Button(Edition.canQuitApps
+                           ? "Quit \(check.all.count == 1 ? Format.shortName(check.all[0].name) : "all \(check.all.count)")"
+                           : "Show in Activity Monitor", action: quitAll)
                         .buttonStyle(.borderedProminent).tint(.orange).controlSize(.small)
                 } else {
                     HStack {
@@ -137,7 +139,7 @@ struct MenuBarShortcuts: View {
     }
 
     var body: some View {
-        if !control.hubApps.isEmpty || !systemItems.isEmpty {
+        if Edition.canHideMenuBarIcons, !control.hubApps.isEmpty || !systemItems.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("Menu bar").font(.system(size: 12, weight: .semibold))

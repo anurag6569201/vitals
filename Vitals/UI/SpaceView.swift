@@ -11,6 +11,29 @@ struct SpaceView: View {
     @State private var confirming = false
 
     var body: some View {
+        if space.hasAccess { content } else { accessRequest }
+    }
+
+    /// Sandboxed (App Store) builds need the person to choose their home folder once.
+    private var accessRequest: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "externaldrive.badge.checkmark")
+                .font(.system(size: 44)).foregroundStyle(.tint)
+            Text("Let Vitals look for space to free").font(.title2.weight(.semibold))
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Choose your home folder in the next window — it opens on it already.", systemImage: "1.circle")
+                Label("Vitals scans it on this Mac. Nothing is uploaded or shared.", systemImage: "lock.shield")
+                Label("Files are only ever moved to the Trash, and only when you say so.", systemImage: "trash")
+            }
+            .frame(maxWidth: 420, alignment: .leading)
+            Button("Choose Home Folder…") { space.requestAccess() }
+                .buttonStyle(.borderedProminent).controlSize(.large)
+        }
+        .padding(40)
+        .frame(minWidth: 820, minHeight: 560)
+    }
+
+    private var content: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 sidebar

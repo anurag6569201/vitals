@@ -145,11 +145,16 @@ private struct ProSettings: View {
                     }
                 }
                 VStack(alignment: .leading, spacing: 6) {
-                    feature("battery.25percent", "Fast-drain alerts with the app to blame")
-                    feature("moon.zzz", "Catch apps that keep your Mac awake")
+                    if Edition.isAppStore {
+                        feature("battery.25percent", "Fast-drain alerts and “Will my battery last?”")
+                    } else {
+                        feature("battery.25percent", "Fast-drain alerts with the app to blame")
+                        feature("moon.zzz", "Catch apps that keep your Mac awake")
+                        feature("eye.slash", "Hide other apps' menu-bar icons")
+                    }
                     feature("moon.stars", "Full “While you were away” reports")
                     feature("externaldrive.badge.minus", "One-click clearing in Free Up Space")
-                    feature("menubar.rectangle", "Menu-bar readings, including “only when high”, and extra icon styles")
+                    feature("menubar.rectangle", "Menu-bar readings, colors, “only when high”, and extra icon styles")
                     feature("heart", "Support an independent developer — one payment, yours forever")
                 }
                 .padding(.vertical, 4)
@@ -158,6 +163,10 @@ private struct ProSettings: View {
             if license.state != .pro {
                 Section {
                     if license.usesAppStore {
+                        if license.canStartTrial {
+                            Button("Start \(LicenseConfig.trialDays)-Day Free Trial") { Task { await license.startTrial() } }
+                                .disabled(license.isWorking)
+                        }
                         HStack {
                             Button("Unlock Pro · \(license.priceText)") { Task { await license.purchase() } }
                                 .buttonStyle(.borderedProminent)
@@ -191,7 +200,9 @@ private struct ProSettings: View {
         switch license.state {
         case .pro: "Unlocked. Thank you!"
         case .trial(let days): "Free trial — \(days) day\(days == 1 ? "" : "s") left. Everything is unlocked."
-        case .free: "The free version keeps watching for runaway apps, heat, memory and disk."
+        case .free: license.canStartTrial
+            ? "Try every Pro feature free for \(LicenseConfig.trialDays) days — no payment needed."
+            : "The free version keeps watching your Mac's heat, memory, battery and disk."
         }
     }
 
@@ -285,7 +296,7 @@ private struct MenuBarSettings: View {
                 .pickerStyle(.radioGroup)
                 .labelsHidden()
                 if model.settings.menuBarStyle.showsReadings {
-                    ForEach(ReadingKind.allCases) { kind in
+                    ForEach(ReadingKind.available) { kind in
                         Toggle(isOn: readingBinding(kind)) {
                             HStack {
                                 Text(kind.title)
@@ -435,7 +446,17 @@ private struct MenuBarItemsSection: View {
 
     var body: some View {
         Section {
-            if !control.isSupported {
+            if !Edition.canHideMenuBarIcons {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("macOS can switch off most menu-bar icons for you:")
+                        .font(.callout)
+                    Label("Open Menu Bar settings with the button below.", systemImage: "1.circle")
+                    Label("Under “Allow in the Menu Bar”, turn off the apps you don't need to see.", systemImage: "2.circle")
+                    Label("Hold ⌘ and drag icons in the menu bar to reorder them.", systemImage: "3.circle")
+                    Button("Open Menu Bar Settings…") { SystemActions.openMenuBarSettings() }
+                        .padding(.top, 2)
+                }
+            } else if !control.isSupported {
                 Text("Hiding other apps' icons from Vitals needs macOS 27. You can still switch icons off in macOS settings.")
                     .font(.callout).foregroundStyle(.secondary)
             } else if !control.isTrusted {
@@ -518,14 +539,18 @@ private struct MenuBarItemsSection: View {
             }
         } header: {
             HStack(spacing: 6) {
-                Text("Your menu bar icons")
-                Text("BETA").font(.system(size: 9, weight: .bold))
-                    .padding(.horizontal, 5).padding(.vertical, 1)
-                    .background(Color.orange.opacity(0.2), in: Capsule()).foregroundStyle(.orange)
-                if !isPro { ProBadge() }
+                Text(Edition.canHideMenuBarIcons ? "Your menu bar icons" : "Tidy your menu bar")
+                if Edition.canHideMenuBarIcons {
+                    Text("BETA").font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background(Color.orange.opacity(0.2), in: Capsule()).foregroundStyle(.orange)
+                    if !isPro { ProBadge() }
+                }
             }
         } footer: {
-            Text("Hidden icons stay one click away in the Vitals popover. While icons are hidden, hover over the clock to reach Notification Center. Quitting Vitals shows everything again.")
+            if Edition.canHideMenuBarIcons {
+                Text("Hidden icons stay one click away in the Vitals popover. While icons are hidden, hover over the clock to reach Notification Center. Quitting Vitals shows everything again.")
+            }
         }
         .onAppear { control.startAfterMenuBarAppears() }
     }

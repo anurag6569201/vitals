@@ -8,6 +8,7 @@ enum SystemActions {
     /// (for example inside the App Sandbox) — callers then fall back to Activity Monitor.
     @discardableResult
     static func quit(_ identity: AppIdentity, force: Bool = false) -> Bool {
+        guard Edition.canQuitApps else { return false }
         let running = NSWorkspace.shared.runningApplications.filter { app in
             if let id = identity.bundleID, app.bundleIdentifier == id { return true }
             if let path = identity.bundlePath, app.bundleURL?.path == path { return true }
