@@ -29,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model = VitalsModel(license: license)
         windows = WindowManager(model: model)
         statusItem = StatusItemController(model: model, windows: windows)
+        model.openWindow = { [weak self] window in self?.windows.show(window) }
         model.start()
 
         if !model.settings.hasCompletedOnboarding {
@@ -44,6 +45,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         windows.showSettings(tab: .general)
         return true
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        model?.ledger.save()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
@@ -85,6 +90,8 @@ final class WindowManager {
     private let model: VitalsModel
     private var settingsWindow: NSWindow?
     private var onboardingWindow: NSWindow?
+    private var receiptWindow: NSWindow?
+    private var spaceWindow: NSWindow?
     private let settingsRouter = SettingsRouter()
 
     init(model: VitalsModel) {
@@ -103,6 +110,42 @@ final class WindowManager {
             settingsWindow = window
         }
         present(settingsWindow)
+    }
+
+    func show(_ window: AppWindow) {
+        switch window {
+        case .settings(let tab): showSettings(tab: tab)
+        case .receipt: showReceipt()
+        case .space: showSpace()
+        }
+    }
+
+    func showReceipt() {
+        if receiptWindow == nil {
+            let view = ReceiptWindowView(model: model, license: model.license,
+                                         upgrade: { [weak self] in self?.showSettings(tab: .pro) })
+            receiptWindow = makeWindow(NSHostingController(rootView: view), title: "Battery Receipt")
+        }
+        present(receiptWindow)
+    }
+
+    func showSpace() {
+        if spaceWindow == nil {
+            let view = SpaceView(space: model.space, license: model.license,
+                                 freeBytes: model.snapshot?.diskFreeBytes,
+                                 upgrade: { [weak self] in self?.showSettings(tab: .pro) })
+            spaceWindow = makeWindow(NSHostingController(rootView: view), title: "Space Hogs")
+        }
+        present(spaceWindow)
+    }
+
+    private func makeWindow(_ controller: NSViewController, title: String) -> NSWindow {
+        let window = NSWindow(contentViewController: controller)
+        window.title = title
+        window.styleMask = [.titled, .closable, .miniaturizable]
+        window.isReleasedWhenClosed = false
+        window.center()
+        return window
     }
 
     func showOnboarding(completion: @escaping () -> Void) {
@@ -128,6 +171,12 @@ final class WindowManager {
         window.makeKeyAndOrderFront(nil)
         window.orderFrontRegardless()
     }
+}
+
+enum AppWindow {
+    case settings(SettingsTab)
+    case receipt
+    case space
 }
 
 enum SettingsTab: String, Hashable {

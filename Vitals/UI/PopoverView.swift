@@ -18,6 +18,13 @@ struct PopoverView: View {
                     .transition(.opacity)
             }
 
+            if let check = model.leavingCheck {
+                LeavingCheckCard(check: check, isPro: license.isPro,
+                                 quitAll: { model.quitAll(check.all); model.dismissLeavingCheck() },
+                                 dismiss: { withAnimation { model.dismissLeavingCheck() } },
+                                 upgrade: { openSettings(.pro) })
+            }
+
             ForEach(model.issues) { issue in
                 IssueCard(issue: issue, close: {
                     withAnimation(.snappy) { model.hide(issue) }
@@ -36,8 +43,15 @@ struct PopoverView: View {
                                upgrade: { openSettings(.pro) })
             }
 
+            if let forecast = model.forecast {
+                BatteryPlannerCard(forecast: forecast, isPro: license.isPro,
+                                   quit: { model.quitAll($0) }, upgrade: { openSettings(.pro) })
+            }
+
             if let snapshot = model.snapshot {
                 VitalsGrid(snapshot: snapshot)
+                ToolsRow(openReceipt: { model.openWindow?(.receipt) },
+                         openSpace: { model.openWindow?(.space) })
                 TopAppsSection(snapshot: snapshot, quit: { model.quit($0) })
             }
 

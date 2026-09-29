@@ -198,6 +198,7 @@ enum IssueAction: String, Codable, Hashable {
     case openStorageSettings
     case openBatterySettings
     case showAwayReport
+    case findSpaceHogs
 
     var title: String {
         switch self {
@@ -209,6 +210,7 @@ enum IssueAction: String, Codable, Hashable {
         case .openStorageSettings: "Manage Storage"
         case .openBatterySettings: "Battery Settings"
         case .showAwayReport: "See report"
+        case .findSpaceHogs: "Find space hogs"
         }
     }
 }

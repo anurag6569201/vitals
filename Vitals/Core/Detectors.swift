@@ -361,7 +361,7 @@ struct LowDiskDetector: Detector {
             detail: "Only \(Format.diskBytes(free)) is free. macOS needs room for updates, memory overflow and caches — below about 5 GB, apps can crash and updates fail. Manage Storage shows what's taking up space.",
             shortLabel: "\(Format.diskBytes(free)) free",
             subject: nil,
-            actions: [.openStorageSettings, .snooze],
+            actions: [.findSpaceHogs, .openStorageSettings, .snooze],
             since: c.now.date)]
     }
 }

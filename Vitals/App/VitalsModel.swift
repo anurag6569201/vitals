@@ -12,12 +12,18 @@ final class VitalsModel: ObservableObject {
     @Published private(set) var severity: Severity = .calm
     @Published private(set) var awayReports: [AwayReport] = AwayReportStore.load()
     @Published var message: String?
+    @Published private(set) var forecast: BatteryForecast?
+    @Published private(set) var leavingCheck: LeavingCheck?
     @Published var settings: AppSettings {
         didSet { if settings != oldValue { settings.save() } }
     }
 
     let license: LicenseManager
     let updates = UpdateChecker()
+    let ledger = UsageLedger()
+    let space = SpaceModel()
+    var openWindow: ((AppWindow) -> Void)?
+    private var wasOnAC: Bool?
     let sampler = SystemSampler()
     private let engine = HealthEngine()
     private let presence = PresenceMonitor()
@@ -86,6 +92,8 @@ final class VitalsModel: ObservableObject {
         let newlyVisible = engine.ingest(snap, settings: &detection, isPro: license.isPro)
         if detection != settings.detection { settings.detection = detection }
         if away.isTracking { away.ingest(snap) }
+        ledger.record(snap)
+        updateBatteryPlanning(snap)
 
         snapshot = snap
         publishIssues()
@@ -96,6 +104,42 @@ final class VitalsModel: ObservableObject {
         issues = engine.visibleIssues
         lockedIssues = engine.lockedIssues
         severity = engine.overallSeverity
+    }
+
+    // MARK: Battery planning & leaving check
+
+    private func updateBatteryPlanning(_ snap: SystemSnapshot) {
+        forecast = BatteryForecast.make(history: engine.history, typicalRate: settings.detection.typicalDrainPerHour)
+
+        let onAC = snap.battery?.isOnAC
+        defer { wasOnAC = onAC }
+        if onAC == true {
+            leavingCheck = nil
+            return
+        }
+        if let check = leavingCheck, snap.date.timeIntervalSince(check.date) > 20 * 60 {
+            leavingCheck = nil
+        }
+        guard wasOnAC == true, onAC == false,
+              let check = LeavingCheck.make(from: snap, ignored: settings.detection.ignoredApps) else { return }
+        leavingCheck = check
+        if settings.notificationsEnabled && license.isPro {
+            Notifier.post(id: "leaving", title: check.headline, body: check.detail)
+        }
+    }
+
+    func dismissLeavingCheck() {
+        leavingCheck = nil
+    }
+
+    func quitAll(_ identities: [AppIdentity]) {
+        var failed: [String] = []
+        for identity in identities where !SystemActions.quit(identity) { failed.append(identity.name) }
+        if failed.isEmpty {
+            show("Asked \(LeavingCheck.list(identities.map(\.name))) to quit.")
+        } else {
+            show("macOS didn't let Vitals quit \(LeavingCheck.list(failed)). Quit it from its menu.")
+        }
     }
 
     // MARK: Notifications
@@ -115,6 +159,7 @@ final class VitalsModel: ObservableObject {
             away.begin(at: now, battery: sampler.batteryState())
         } else if !isAway && wasAway {
             if let report = away.end(at: now, battery: sampler.batteryState()), settings.awayReportsEnabled {
+                ledger.record(report)
                 awayReports.insert(report, at: 0)
                 AwayReportStore.save(awayReports)
                 if report.verdict == .unusual && settings.notificationsEnabled {
@@ -161,6 +206,8 @@ final class VitalsModel: ObservableObject {
             SystemActions.openBatterySettings()
         case .showAwayReport:
             break
+        case .findSpaceHogs:
+            openWindow?(.space)
         }
         publishIssues()
     }
