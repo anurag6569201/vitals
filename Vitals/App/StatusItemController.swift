@@ -200,6 +200,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         case .upload: Format.rate(snap.uploadRate)
         case .disk: snap.diskFreeBytes.map { Format.diskBytes($0) }
         case .topApp: snap.apps.first.map { Format.cpu($0.cpuPercent) }
+        case .screenTime: Format.duration(model.appTime.total(.today))
         case .worldClock: "\(WorldClock.label(for: model.settings.worldClockZone)) \(WorldClock.time(in: model.settings.worldClockZone))"
         }
     }
@@ -214,6 +215,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         case .upload: snap.uploadRate >= 2_000_000
         case .disk: (snap.diskFreeBytes ?? .max) < 10_000_000_000
         case .topApp: (snap.apps.first?.cpuPercent ?? 0) >= 80
+        case .screenTime: false
         case .worldClock: true
         }
     }

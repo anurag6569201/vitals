@@ -57,6 +57,9 @@ struct PopoverView: View {
                 if show(.freeUpSpace) {
                     ToolsRow(space: model.space, openSpace: { model.openWindow?(.space) })
                 }
+                if show(.timeSpent) {
+                    TimeSpentSection(tracker: model.appTime, isPro: license.isPro, upgrade: { openSettings(.pro) })
+                }
                 if show(.topApps) { TopAppsSection(snapshot: snapshot, quit: { model.quit($0) }) }
             }
 
@@ -78,7 +81,7 @@ struct PopoverView: View {
     }
 
     private func show(_ section: PopoverSection) -> Bool {
-        !model.settings.hiddenSections.contains(section)
+        PopoverSection.available.contains(section) && !model.settings.hiddenSections.contains(section)
     }
 }
 

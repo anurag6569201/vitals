@@ -44,7 +44,7 @@ enum IconStyle: String, Codable, CaseIterable, Identifiable {
 }
 
 enum PopoverSection: String, Codable, CaseIterable, Identifiable {
-    case menuBarItems, batteryPlanner, vitals, freeUpSpace, topApps
+    case menuBarItems, batteryPlanner, vitals, freeUpSpace, timeSpent, topApps
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -52,8 +52,13 @@ enum PopoverSection: String, Codable, CaseIterable, Identifiable {
         case .batteryPlanner: "Battery forecast"
         case .vitals: "Live readings grid"
         case .freeUpSpace: "Free up space"
+        case .timeSpent: "Where your time went"
         case .topApps: "Apps using your Mac"
         }
+    }
+    /// Sections this edition can show. The App Store build can't hide icons or see per-app usage.
+    static var available: [PopoverSection] {
+        Edition.isAppStore ? allCases.filter { $0 != .menuBarItems && $0 != .topApps } : allCases
     }
 }
 
@@ -71,7 +76,7 @@ enum HotkeyChoice: String, Codable, CaseIterable, Identifiable {
 }
 
 enum ReadingKind: String, Codable, CaseIterable, Identifiable {
-    case cpu, gpu, memory, download, upload, disk, topApp, worldClock
+    case cpu, gpu, memory, download, upload, disk, topApp, screenTime, worldClock
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -82,6 +87,7 @@ enum ReadingKind: String, Codable, CaseIterable, Identifiable {
         case .upload: "Upload speed"
         case .disk: "Disk free"
         case .topApp: "Busiest app"
+        case .screenTime: "Time at your Mac today"
         case .worldClock: "Second time zone"
         }
     }
@@ -94,6 +100,7 @@ enum ReadingKind: String, Codable, CaseIterable, Identifiable {
         case .upload: "320 KB/s"
         case .disk: "84 GB"
         case .topApp: "45%"
+        case .screenTime: "5h 12m"
         case .worldClock: "NYC 9:41"
         }
     }
@@ -113,6 +120,7 @@ enum ReadingKind: String, Codable, CaseIterable, Identifiable {
         case .upload: "arrow.up"
         case .disk: "internaldrive"
         case .topApp: "app.fill"
+        case .screenTime: "hourglass"
         case .worldClock: "globe"
         }
     }

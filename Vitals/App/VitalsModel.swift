@@ -25,6 +25,7 @@ final class VitalsModel: ObservableObject {
     let license: LicenseManager
     let updates = UpdateChecker()
     let space = SpaceModel()
+    let appTime = AppTimeTracker()
     let keepAwake = KeepAwake()
     let hotKey = HotKey()
     var openWindow: ((AppWindow) -> Void)?

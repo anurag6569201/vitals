@@ -34,6 +34,11 @@ enum IssueKind: String, Codable, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Alerts this edition can raise. The App Store build can't see other apps' CPU use.
+    static var available: [IssueKind] {
+        Edition.isAppStore ? allCases.filter { $0 != .runawayApp } : allCases
+    }
+
     var title: String {
         switch self {
         case .runawayApp: "Runaway apps"

@@ -86,7 +86,7 @@ private struct AlertSettings: View {
             }
 
             Section("Watch for") {
-                ForEach(IssueKind.allCases) { kind in
+                ForEach(IssueKind.available) { kind in
                     Toggle(isOn: kindBinding(kind)) {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 6) {
@@ -99,6 +99,7 @@ private struct AlertSettings: View {
                 }
             }
 
+            if !Edition.isAppStore || !model.settings.detection.ignoredApps.isEmpty {
             Section("Ignored apps") {
                 if model.settings.detection.ignoredApps.isEmpty {
                     Text("None. Choose “Always ignore” on an alert to add an app here.")
@@ -112,6 +113,7 @@ private struct AlertSettings: View {
                         }
                     }
                 }
+            }
             }
         }
         .formStyle(.grouped)
@@ -147,10 +149,12 @@ private struct ProSettings: View {
                 VStack(alignment: .leading, spacing: 6) {
                     if Edition.isAppStore {
                         feature("battery.25percent", "Fast-drain alerts and “Will my battery last?”")
+                        feature("hourglass", "Where your time went — the full 7-day view")
                     } else {
                         feature("battery.25percent", "Fast-drain alerts with the app to blame")
                         feature("moon.zzz", "Catch apps that keep your Mac awake")
                         feature("eye.slash", "Hide other apps' menu-bar icons")
+                        feature("hourglass", "Where your time went — the full 7-day view")
                     }
                     feature("moon.stars", "Full “While you were away” reports")
                     feature("externaldrive.badge.minus", "One-click clearing in Free Up Space")
@@ -419,7 +423,7 @@ private struct PopoverSettings: View {
     var body: some View {
         Form {
             Section {
-                ForEach(PopoverSection.allCases) { section in
+                ForEach(PopoverSection.available) { section in
                     Toggle(section.title, isOn: Binding(
                         get: { !model.settings.hiddenSections.contains(section) },
                         set: { on in
