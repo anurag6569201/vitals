@@ -11,41 +11,25 @@ struct SpaceView: View {
     @State private var confirming = false
 
     var body: some View {
-        NavigationSplitView {
-            List(selection: $category) {
-                Section {
-                    ForEach(SpaceCategory.allCases) { item in
-                        HStack {
-                            Label(item.title, systemImage: item.symbol)
-                            Spacer()
-                            if space.scanning.contains(item) {
-                                ProgressView().controlSize(.mini)
-                            } else if space.total(item) > 0 {
-                                Text(Format.diskBytes(space.total(item)))
-                                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                            }
-                        }
-                        .tag(item)
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                sidebar
+                    .frame(width: 250)
+                    .background(Color(nsColor: .windowBackgroundColor))
+                Divider()
+                Group {
+                    if let category {
+                        CategoryDetail(category: category, space: space, isPro: license.isPro)
+                    } else {
+                        Text("Pick a category").foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                } header: {
-                    DiskSummary(snapshot: model.snapshot, found: space.reviewableTotal)
-                        .padding(.bottom, 6)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(nsColor: .textBackgroundColor))
             }
-            .navigationSplitViewColumnWidth(min: 230, ideal: 250)
-        } detail: {
-            if let category {
-                CategoryDetail(category: category, space: space, isPro: license.isPro)
-            } else {
-                Text("Pick a category").foregroundStyle(.secondary)
-            }
-        }
-        .safeAreaInset(edge: .bottom) { bottomBar }
-        .toolbar {
-            ToolbarItem {
-                Button { space.scanAll() } label: { Label("Scan again", systemImage: "arrow.clockwise") }
-                    .disabled(space.isScanning)
-            }
+            Divider()
+            bottomBar
         }
         .frame(minWidth: 820, minHeight: 560)
         .onAppear { space.scanIfNeeded() }
@@ -54,6 +38,50 @@ struct SpaceView: View {
             Button("Move to Trash (\(Format.diskBytes(space.selectedBytes)))", role: .destructive) { space.trashSelected() }
         } message: {
             Text("You can put anything back from the Trash until you empty it.")
+        }
+    }
+
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
+                DiskSummary(snapshot: model.snapshot, found: space.reviewableTotal)
+                Spacer()
+                Button { space.scanAll() } label: { Image(systemName: "arrow.clockwise") }
+                    .buttonStyle(.borderless)
+                    .help("Scan again")
+                    .disabled(space.isScanning)
+            }
+            .padding(14)
+            Divider()
+            ScrollView {
+                VStack(spacing: 2) {
+                    ForEach(SpaceCategory.allCases) { item in
+                        Button { category = item } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: item.symbol).frame(width: 18)
+                                Text(item.title).lineLimit(1)
+                                Spacer()
+                                if space.scanning.contains(item) {
+                                    ProgressView().controlSize(.mini)
+                                } else if space.total(item) > 0 {
+                                    Text(Format.diskBytes(space.total(item)))
+                                        .font(.caption.monospacedDigit())
+                                        .foregroundStyle(category == item ? Color.white.opacity(0.85) : Color.secondary)
+                                }
+                            }
+                            .font(.system(size: 13))
+                            .foregroundStyle(category == item ? Color.white : Color.primary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(category == item ? Color.accentColor : Color.clear,
+                                        in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(8)
+            }
         }
     }
 
@@ -103,8 +131,7 @@ private struct DiskSummary: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
-        .textCase(nil)
-    }
+            }
 }
 
 private struct CategoryDetail: View {

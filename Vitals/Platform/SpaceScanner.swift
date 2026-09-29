@@ -422,9 +422,25 @@ nonisolated enum SpaceScanner {
         do { try process.run() } catch { return [] }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
-        return String(decoding: data, as: UTF8.self)
+        let found = String(decoding: data, as: UTF8.self)
             .split(separator: "\n")
             .map { URL(fileURLWithPath: String($0)) }
+        return found.isEmpty ? walkUserFolders() : found
+    }
+
+    /// Fallback when Spotlight is off or returns nothing: walk the usual user folders.
+    private static func walkUserFolders() -> [URL] {
+        var results: [URL] = []
+        for name in ["Desktop", "Documents", "Downloads", "Movies", "Music", "Pictures"] {
+            guard let enumerator = FileManager.default.enumerator(
+                at: home.appendingPathComponent(name), includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey],
+                options: [.skipsHiddenFiles, .skipsPackageDescendants], errorHandler: { _, _ in true }) else { continue }
+            for case let url as URL in enumerator {
+                let values = try? url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+                if values?.isRegularFile == true, (values?.fileSize ?? 0) >= 20_000_000 { results.append(url) }
+            }
+        }
+        return results
     }
 
     static func topLevel(_ folder: URL, includeHidden: Bool = false) -> [URL] {
