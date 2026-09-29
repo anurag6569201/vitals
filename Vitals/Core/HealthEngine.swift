@@ -17,6 +17,8 @@ final class HealthEngine {
     private var active: [String: Issue] = [:]
     private var lastSeen: [String: Date] = [:]
     private var snoozedUntil: [String: Date] = [:]
+    /// Closed by the person; stays hidden until the problem clears and comes back.
+    private var hidden: Set<String> = []
     private var lastDrainLearning: Date?
 
     /// Issues the user can see, most severe first.
@@ -51,11 +53,12 @@ final class HealthEngine {
         for (id, seen) in lastSeen where found[id] == nil && snapshot.date.timeIntervalSince(seen) > Self.clearGrace {
             active[id] = nil
             lastSeen[id] = nil
+            hidden.remove(id)
         }
         snoozedUntil = snoozedUntil.filter { $0.value > snapshot.date }
 
         let shown = active.values
-            .filter { snoozedUntil[$0.id] == nil }
+            .filter { snoozedUntil[$0.id] == nil && !hidden.contains($0.id) }
             .filter { issue in
                 guard let subject = issue.subject else { return true }
                 return settings.ignoredApps[subject.key] == nil
@@ -78,6 +81,13 @@ final class HealthEngine {
     func resetHistory() {
         history.removeAll()
         lastDrainLearning = nil
+    }
+
+    /// The × on a card: hide it until this problem goes away and happens again.
+    func hide(_ issue: Issue) {
+        hidden.insert(issue.id)
+        visibleIssues.removeAll { $0.id == issue.id }
+        lockedIssues.removeAll { $0.id == issue.id }
     }
 
     func dismiss(_ issue: Issue) {

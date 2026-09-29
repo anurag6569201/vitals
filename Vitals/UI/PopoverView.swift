@@ -19,7 +19,9 @@ struct PopoverView: View {
             }
 
             ForEach(model.issues) { issue in
-                IssueCard(issue: issue) { action in
+                IssueCard(issue: issue, close: {
+                    withAnimation(.snappy) { model.hide(issue) }
+                }) { action in
                     withAnimation(.snappy) { model.perform(action, on: issue) }
                 }
             }
@@ -106,14 +108,29 @@ private struct HeaderView: View {
 
 struct IssueCard: View {
     let issue: Issue
+    let close: () -> Void
     let perform: (IssueAction) -> Void
+    @State private var hovering = false
 
     var body: some View {
         Card(accent: issue.severity.color) {
             HStack(alignment: .top, spacing: 10) {
                 AppIconView(identity: issue.subject, fallbackSymbol: issue.kind.symbol, size: 30)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(issue.headline).font(.system(size: 13, weight: .semibold))
+                    HStack(alignment: .top) {
+                        Text(issue.headline).font(.system(size: 13, weight: .semibold))
+                        Spacer(minLength: 4)
+                        Button(action: close) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 18, height: 18)
+                                .background(Color.secondary.opacity(hovering ? 0.18 : 0), in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .onHover { hovering = $0 }
+                        .help("Hide until this happens again")
+                    }
                     Text(issue.detail)
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)

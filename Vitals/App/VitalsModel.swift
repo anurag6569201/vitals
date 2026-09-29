@@ -165,6 +165,11 @@ final class VitalsModel: ObservableObject {
         publishIssues()
     }
 
+    func hide(_ issue: Issue) {
+        engine.hide(issue)
+        publishIssues()
+    }
+
     func quit(_ identity: AppIdentity) {
         if SystemActions.quit(identity) {
             show("Asked \(identity.name) to quit.")

@@ -190,7 +190,9 @@ struct MemoryPressureDetector: Detector {
               samples.allSatisfy({ $0.memoryPressure >= .warning }) else { return [] }
 
         let culprit = c.now.topByMemory.first { !c.isIgnored($0.identity) && !$0.identity.isSystem }
-        var detail = "Your Mac is out of free memory and is using the disk as overflow (\(Format.bytes(c.now.swapUsedBytes)) of swap), which makes everything slower."
+        var detail = critical
+            ? "Your Mac is out of free memory and is using the disk as overflow (\(Format.bytes(c.now.swapUsedBytes)) of swap), which makes everything slower."
+            : "Free memory is running low, so your Mac has moved \(Format.bytes(c.now.swapUsedBytes)) to disk (swap). If things feel slow, this is why."
         if let culprit {
             detail += " \(culprit.identity.name) is using the most: \(Format.bytes(culprit.memoryBytes)). Quitting it, or closing tabs and windows you don't need, frees memory instantly."
         } else {
