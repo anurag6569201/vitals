@@ -18,7 +18,7 @@ enum MenuBarStyle: String, Codable, CaseIterable, Identifiable {
 }
 
 enum IconStyle: String, Codable, CaseIterable, Identifiable {
-    case pulse, heart, gauge, dot
+    case pulse, heart, gauge, dot, none
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -26,16 +26,20 @@ enum IconStyle: String, Codable, CaseIterable, Identifiable {
         case .heart: "Heart"
         case .gauge: "Gauge"
         case .dot: "Dot"
+        case .none: "None"
         }
     }
+    /// Symbol drawn in the menu bar. "None" falls back to Pulse whenever an icon must show.
     var symbol: String {
         switch self {
-        case .pulse: "waveform.path.ecg"
+        case .pulse, .none: "waveform.path.ecg"
         case .heart: "heart.fill"
         case .gauge: "gauge.with.dots.needle.33percent"
         case .dot: "circle.fill"
         }
     }
+    /// Symbol for the picker in Settings.
+    var pickerSymbol: String { self == .none ? "eye.slash" : symbol }
     var isPro: Bool { self == .heart || self == .gauge }
 }
 

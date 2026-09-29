@@ -254,7 +254,7 @@ private struct MenuBarSettings: View {
                             if style.isPro && !isPro { upgrade() } else { model.settings.iconStyle = style }
                         } label: {
                             VStack(spacing: 6) {
-                                Image(systemName: style.symbol)
+                                Image(systemName: style.pickerSymbol)
                                     .font(.system(size: style == .dot ? 10 : 18, weight: .semibold))
                                     .frame(width: 44, height: 32)
                                     .background(model.settings.iconStyle == style ? Color.accentColor.opacity(0.18) : Color.clear,
@@ -270,7 +270,9 @@ private struct MenuBarSettings: View {
                         .buttonStyle(.plain)
                     }
                 }
-                Text("The icon turns orange or red, with a dot, only when something needs you.")
+                Text(model.settings.iconStyle == .none
+                     ? "No icon while your readings are showing. The Pulse icon comes back if no readings are on, and whenever something needs you."
+                     : "The icon turns orange or red, with a dot, only when something needs you.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -488,7 +490,8 @@ private struct MenuBarItemsSection: View {
                             .disabled(control.isApplying)
                     }
                 }
-                DisclosureGroup("Apple controls") {
+                Text("Apple icons").font(.headline).padding(.top, 6)
+                Group {
                     ForEach(ControlledSystemItem.allCases) { item in
                         Toggle(isOn: Binding(
                             get: { !control.hiddenSystemIDs.contains(item.id) },

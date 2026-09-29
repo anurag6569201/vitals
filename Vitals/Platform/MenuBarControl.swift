@@ -142,8 +142,11 @@ private enum MenuItemActivator {
 }
 
 enum ControlledSystemItem: Int, CaseIterable, Identifiable {
-    case battery = 0, bluetooth = 1, displays = 3, keyboard = 4
-    case sound = 5, wifi = 6, screenMirroring = 7
+    // Raw values are MenuBarAgent's system-item indices (found by testing on macOS 27).
+    // Spotlight is not a system item: it belongs to the Spotlight app, so it is hidden by bundle ID.
+    // The clock (index 2) is deliberately not offered: it is the way into Notification Center.
+    case wifi = 6, battery = 0, bluetooth = 1, sound = 5, spotlight = 100, controlCenter = 8
+    case displays = 3, keyboard = 4, screenMirroring = 7
 
     var id: Int { rawValue }
     var title: String {
@@ -155,6 +158,8 @@ enum ControlledSystemItem: Int, CaseIterable, Identifiable {
         case .sound: "Sound"
         case .wifi: "Wi-Fi"
         case .screenMirroring: "Screen Mirroring"
+        case .spotlight: "Spotlight"
+        case .controlCenter: "Control Centre"
         }
     }
     var symbol: String {
@@ -166,8 +171,13 @@ enum ControlledSystemItem: Int, CaseIterable, Identifiable {
         case .sound: "speaker.wave.2"
         case .wifi: "wifi"
         case .screenMirroring: "rectangle.on.rectangle"
+        case .spotlight: "magnifyingglass"
+        case .controlCenter: "switch.2"
         }
     }
+    /// Items owned by an app rather than MenuBarAgent are hidden by leaving that app off the allow-list.
+    /// On macOS 27 the Spotlight icon belongs to "com.apple.campo".
+    var hiddenBundleIDs: [String] { self == .spotlight ? ["com.apple.campo", "com.apple.Spotlight"] : [] }
 
     func matches(identifier: String) -> Bool {
         let suffixes: [String]
@@ -179,6 +189,8 @@ enum ControlledSystemItem: Int, CaseIterable, Identifiable {
         case .sound: suffixes = ["volume", "sound"]
         case .wifi: suffixes = ["wifi"]
         case .screenMirroring: suffixes = ["airplay", "screenmirroring"]
+        case .spotlight: suffixes = ["spotlight"]
+        case .controlCenter: suffixes = ["controlcenter"]
         }
         return suffixes.contains { identifier.lowercased().hasSuffix($0) }
     }
@@ -403,6 +415,16 @@ final class MenuBarControl: ObservableObject {
     }
 
     func openSystemMenu(_ item: ControlledSystemItem) {
+        if item == .spotlight {
+            // Spotlight's icon is optional; its shortcut always works. Send ⌘Space.
+            let source = CGEventSource(stateID: .hidSystemState)
+            for down in [true, false] {
+                let event = CGEvent(keyboardEventSource: source, virtualKey: 49, keyDown: down)
+                event?.flags = .maskCommand
+                event?.post(tap: .cghidEventTap)
+            }
+            return
+        }
         guard isTrusted,
               let agent = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.MenuBarAgent").first
         else {
@@ -744,6 +766,7 @@ final class MenuBarControl: ObservableObject {
         // so launching a new app does not make its menu item disappear by default.
         let allowed = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
             .subtracting(hiddenIDs)
+            .subtracting(hiddenSystemIDs.flatMap { ControlledSystemItem(rawValue: $0)?.hiddenBundleIDs ?? [] })
             .union(["com.apple.MenuBarAgent", "com.apple.systemuiserver", "com.apple.controlcenter",
                     "com.apple.notificationcenterui", "com.apple.UserNotificationCenter",
                     Bundle.main.bundleIdentifier ?? "anurag.Vitals"])

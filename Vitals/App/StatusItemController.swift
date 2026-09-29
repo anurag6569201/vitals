@@ -113,9 +113,6 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         guard let button = statusItem.button else { return }
         let severity = model.severity
         let colors = model.license.isPro ? model.settings : AppSettings()
-        button.image = StatusIcon.image(severity: severity, style: model.settings.iconStyle,
-                                        awake: model.keepAwake.isOn,
-                                        tint: NSColor(hex: colors.iconColorHex))
         button.toolTip = tooltip()
 
         // While other icons are hidden, macOS turns off its overflow (») menu, so a wide item
@@ -142,9 +139,16 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
                                              font: font, color: textColor))
             }
         }
+        // "None" hides the icon only while readings are showing, all is well and Keep Awake is off.
+        // Otherwise it falls back to Pulse, so Vitals never disappears from the menu bar.
+        let hideIcon = model.settings.iconStyle == .none && !segments.isEmpty
+            && severity == .calm && !model.keepAwake.isOn
+        button.image = hideIcon ? nil : StatusIcon.image(severity: severity, style: model.settings.iconStyle,
+                                                         awake: model.keepAwake.isOn,
+                                                         tint: NSColor(hex: colors.iconColorHex))
         let title = NSMutableAttributedString()
         for (index, segment) in segments.enumerated() {
-            title.append(NSAttributedString(string: index == 0 ? " " : "   ", attributes: [.font: font]))
+            title.append(NSAttributedString(string: index == 0 ? (hideIcon ? "" : " ") : "   ", attributes: [.font: font]))
             title.append(segment)
         }
         button.attributedTitle = title
