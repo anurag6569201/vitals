@@ -167,7 +167,7 @@ enum AppWindow {
 }
 
 enum SettingsTab: String, Hashable {
-    case general, alerts, pro, about
+    case general, menuBar, popover, alerts, pro, about
 }
 
 @MainActor

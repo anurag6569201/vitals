@@ -17,6 +17,9 @@ When something actually needs you, it says what's wrong in plain English and off
 - **Leaving Check** *(Pro)* — right after you unplug, warns if an app would keep your Mac awake and hot in your bag.
 - **Free Up Space** — finds what's eating your disk, for everyone, not just developers: large files (with last-opened dates), old downloads, installers and already-unzipped archives, old screenshots and recordings, true duplicates (verified by full hash), apps you haven't opened in 3 months, app caches and leftovers of deleted apps, developer junk, old iPhone updates, and the Trash. Everything goes to the Trash, never straight to deletion. Reviewing is free; one-click clearing is Pro.
 
+- **Keep Awake** — 30 min / 1 h / 3 h / until off, with an option to let the display sleep. Replaces a separate caffeine app.
+- **Your menu bar, your way** — icon styles (Pulse, Dot free; Heart, Gauge Pro), "readings only when they're high" (Pro), a global shortcut to open Vitals, a choice of popover sections, and a Tidy-your-menu-bar helper.
+
 Plus a compact live dashboard (CPU, memory, battery draw, disk, network, uptime) and the apps using your Mac right now.
 
 ## How it works

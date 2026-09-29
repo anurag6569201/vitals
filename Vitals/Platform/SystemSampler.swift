@@ -219,7 +219,8 @@ final class SystemSampler {
         assertionsAvailable = true
         var result: [PowerAssertion] = []
         for (key, value) in dictionary {
-            guard let pid = (key as? NSNumber)?.int32Value, let list = value as? [[String: Any]] else { continue }
+            guard let pid = (key as? NSNumber)?.int32Value, pid != getpid(),
+                  let list = value as? [[String: Any]] else { continue }
             for entry in list {
                 let type = entry["AssertType"] as? String ?? ""
                 let reason = entry["AssertName"] as? String ?? ""

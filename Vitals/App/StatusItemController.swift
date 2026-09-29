@@ -35,9 +35,11 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         popover.contentViewController = host
 
         model.objectWillChange
+            .merge(with: model.keepAwake.objectWillChange)
             .debounce(for: .milliseconds(50), scheduler: RunLoop.main)
             .sink { [weak self] _ in self?.render() }
             .store(in: &cancellables)
+        HotKey.action = { [weak self] in self?.toggle(nil) }
         render()
     }
 
@@ -50,7 +52,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         DispatchQueue.main.async { [weak self] in self?.model.isPopoverOpen = true }
     }
 
-    @objc private func toggle(_ sender: Any?) {
+    @objc func toggle(_ sender: Any?) {
         if popover.isShown { popover.performClose(sender) } else { showPopover() }
     }
 
@@ -70,7 +72,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private func render() {
         guard let button = statusItem.button else { return }
         let severity = model.severity
-        button.image = StatusIcon.image(severity: severity)
+        button.image = StatusIcon.image(severity: severity, style: model.settings.iconStyle,
+                                        awake: model.keepAwake.isOn)
         button.toolTip = tooltip()
 
         var parts: [String] = []
@@ -78,24 +81,37 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         if style != .iconOnly, severity >= .warning, let top = model.issues.first {
             parts.append(top.shortLabel)
         }
-        if style == .readings, model.license.isPro, let snap = model.snapshot {
-            parts.append(contentsOf: model.settings.readings.compactMap { reading(for: $0, snap) })
+        if style.showsReadings, model.license.isPro, let snap = model.snapshot {
+            let onlyHigh = style == .smartReadings
+            parts.append(contentsOf: model.settings.readings.compactMap { reading(for: $0, snap, onlyWhenHigh: onlyHigh) })
         }
         let text = parts.joined(separator: "  ")
         button.attributedTitle = NSAttributedString(string: text.isEmpty ? "" : " " + text, attributes: [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 11.5, weight: .medium),
-            .foregroundColor: severity >= .warning && !parts.isEmpty && style != .readings
+            .foregroundColor: severity >= .warning && !parts.isEmpty && !style.showsReadings
                 ? StatusIcon.color(for: severity) : NSColor.labelColor
         ])
     }
 
-    private func reading(for kind: ReadingKind, _ snap: SystemSnapshot) -> String? {
-        switch kind {
+    private func reading(for kind: ReadingKind, _ snap: SystemSnapshot, onlyWhenHigh: Bool) -> String? {
+        if onlyWhenHigh && !Self.isHigh(kind, snap) { return nil }
+        return switch kind {
         case .cpu: "CPU \(Format.percent(snap.cpuTotal))"
         case .memory: "MEM \(Format.percent(snap.memoryUsed))"
         case .battery: snap.battery.map { "BAT \(Format.percent($0.level))" }
         case .network: "↓\(Format.rate(snap.downloadRate))"
         case .disk: snap.diskFreeBytes.map { "\(Format.diskBytes($0)) free" }
+        }
+    }
+
+    /// When a reading is worth a glance in "only when high" mode.
+    static func isHigh(_ kind: ReadingKind, _ snap: SystemSnapshot) -> Bool {
+        switch kind {
+        case .cpu: snap.cpuTotal >= 0.75
+        case .memory: snap.memoryPressure >= .warning
+        case .battery: snap.battery.map { !$0.isOnAC && $0.level < 0.2 } ?? false
+        case .network: snap.downloadRate >= 5_000_000 || snap.uploadRate >= 2_000_000
+        case .disk: (snap.diskFreeBytes ?? .max) < 10_000_000_000
         }
     }
 
@@ -115,11 +131,14 @@ enum StatusIcon {
         }
     }
 
-    /// A pulse line; a colored dot appears when there's something to see.
-    static func image(severity: Severity) -> NSImage? {
-        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
-        guard let symbol = NSImage(systemSymbolName: "waveform.path.ecg", accessibilityDescription: "Vitals")?
+    /// The chosen icon; a colored dot appears when there's something to see,
+    /// and a small cup while Keep Awake is on.
+    static func image(severity: Severity, style: IconStyle = .pulse, awake: Bool = false) -> NSImage? {
+        let pointSize: CGFloat = style == .dot ? 8 : 13
+        let config = NSImage.SymbolConfiguration(pointSize: pointSize, weight: .semibold)
+        guard let base = NSImage(systemSymbolName: style.symbol, accessibilityDescription: "Vitals")?
             .withSymbolConfiguration(config) else { return nil }
+        let symbol = awake ? withCup(base) : base
         guard severity > .calm else {
             symbol.isTemplate = true
             return symbol
@@ -139,6 +158,24 @@ enum StatusIcon {
         }
         image.isTemplate = false
         image.accessibilityDescription = "Vitals: \(severity.title)"
+        return image
+    }
+}
+
+extension StatusIcon {
+    static func withCup(_ base: NSImage) -> NSImage {
+        let cupConfig = NSImage.SymbolConfiguration(pointSize: 9, weight: .bold)
+        guard let cup = NSImage(systemSymbolName: "cup.and.saucer.fill", accessibilityDescription: "Keeping awake")?
+            .withSymbolConfiguration(cupConfig) else { return base }
+        let size = NSSize(width: base.size.width + cup.size.width + 3, height: max(base.size.height, cup.size.height))
+        let baseSize = base.size
+        let cupSize = cup.size
+        let image = NSImage(size: size, flipped: false) { rect in
+            base.draw(in: NSRect(x: 0, y: (rect.height - baseSize.height) / 2, width: baseSize.width, height: baseSize.height))
+            cup.draw(in: NSRect(x: baseSize.width + 3, y: (rect.height - cupSize.height) / 2, width: cupSize.width, height: cupSize.height))
+            return true
+        }
+        image.isTemplate = true
         return image
     }
 }

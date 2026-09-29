@@ -37,6 +37,12 @@ enum SystemActions {
         }
     }
 
+    static func openMenuBarSettings() {
+        for id in ["com.apple.MenuBar-Settings.extension", "com.apple.ControlCenter-Settings.extension"] {
+            if let url = URL(string: "x-apple.systempreferences:\(id)"), NSWorkspace.shared.open(url) { return }
+        }
+    }
+
     static func open(bundleID: String) {
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())

@@ -12,6 +12,12 @@ struct SettingsView: View {
             GeneralSettings(model: model, isPro: license.isPro)
                 .tabItem { Label("General", systemImage: "gearshape") }
                 .tag(SettingsTab.general)
+            MenuBarSettings(model: model, isPro: license.isPro, upgrade: { router.tab = .pro })
+                .tabItem { Label("Menu Bar", systemImage: "menubar.rectangle") }
+                .tag(SettingsTab.menuBar)
+            PopoverSettings(model: model)
+                .tabItem { Label("Popover", systemImage: "rectangle.stack") }
+                .tag(SettingsTab.popover)
             AlertSettings(model: model, isPro: license.isPro)
                 .tabItem { Label("Alerts", systemImage: "bell.badge") }
                 .tag(SettingsTab.alerts)
@@ -22,7 +28,7 @@ struct SettingsView: View {
                 .tabItem { Label("About", systemImage: "info.circle") }
                 .tag(SettingsTab.about)
         }
-        .frame(width: 520, height: 500)
+        .frame(width: 560, height: 560)
     }
 }
 
@@ -47,29 +53,6 @@ private struct GeneralSettings: View {
                 }
             }
 
-            Section("Menu bar") {
-                Picker("Show", selection: $model.settings.menuBarStyle) {
-                    ForEach(MenuBarStyle.allCases) { style in
-                        HStack {
-                            Text(style.title)
-                            if style == .readings && !isPro { Text("(Pro)") }
-                        }
-                        .tag(style)
-                    }
-                }
-                .pickerStyle(.radioGroup)
-                if model.settings.menuBarStyle == .readings {
-                    if isPro {
-                        ForEach(ReadingKind.allCases) { kind in
-                            Toggle(kind.title, isOn: readingBinding(kind))
-                        }
-                    } else {
-                        Text("Live readings in the menu bar are part of Vitals Pro.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            }
-
             Section("Notifications") {
                 Toggle("Notify me when something needs attention", isOn: $model.settings.notificationsEnabled)
                     .onChange(of: model.settings.notificationsEnabled) { _, on in
@@ -83,15 +66,6 @@ private struct GeneralSettings: View {
         .formStyle(.grouped)
     }
 
-    private func readingBinding(_ kind: ReadingKind) -> Binding<Bool> {
-        Binding(
-            get: { model.settings.readings.contains(kind) },
-            set: { on in
-                var list = model.settings.readings.filter { $0 != kind }
-                if on { list.append(kind) }
-                model.settings.readings = ReadingKind.allCases.filter { list.contains($0) }
-            })
-    }
 }
 
 // MARK: - Alerts
@@ -174,7 +148,8 @@ private struct ProSettings: View {
                     feature("battery.25percent", "Fast-drain alerts with the app to blame")
                     feature("moon.zzz", "Catch apps that keep your Mac awake")
                     feature("moon.stars", "Full “While you were away” reports")
-                    feature("menubar.rectangle", "Live readings in the menu bar")
+                    feature("externaldrive.badge.minus", "One-click clearing in Free Up Space")
+                    feature("menubar.rectangle", "Menu-bar readings, including “only when high”, and extra icon styles")
                     feature("heart", "Support an independent developer — one payment, yours forever")
                 }
                 .padding(.vertical, 4)
@@ -259,5 +234,124 @@ private struct AboutSettings: View {
             Image(systemName: available ? "checkmark.circle.fill" : "minus.circle")
                 .foregroundStyle(available ? .green : .secondary)
         }
+    }
+}
+
+// MARK: - Menu bar
+
+private struct MenuBarSettings: View {
+    @ObservedObject var model: VitalsModel
+    let isPro: Bool
+    let upgrade: () -> Void
+
+    var body: some View {
+        Form {
+            Section("Icon") {
+                HStack(spacing: 10) {
+                    ForEach(IconStyle.allCases) { style in
+                        Button {
+                            if style.isPro && !isPro { upgrade() } else { model.settings.iconStyle = style }
+                        } label: {
+                            VStack(spacing: 6) {
+                                Image(systemName: style.symbol)
+                                    .font(.system(size: style == .dot ? 10 : 18, weight: .semibold))
+                                    .frame(width: 44, height: 32)
+                                    .background(model.settings.iconStyle == style ? Color.accentColor.opacity(0.18) : Color.clear,
+                                                in: RoundedRectangle(cornerRadius: 8))
+                                    .overlay(RoundedRectangle(cornerRadius: 8)
+                                        .stroke(model.settings.iconStyle == style ? Color.accentColor : Color.secondary.opacity(0.3)))
+                                HStack(spacing: 3) {
+                                    Text(style.title).font(.caption)
+                                    if style.isPro && !isPro { Image(systemName: "lock.fill").font(.system(size: 8)) }
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                Text("The icon turns orange or red, with a dot, only when something needs you.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section("Show next to the icon") {
+                Picker("Show", selection: styleBinding) {
+                    ForEach(MenuBarStyle.allCases) { style in
+                        Text(style.title + (style.isPro && !isPro ? " (Pro)" : "")).tag(style)
+                    }
+                }
+                .pickerStyle(.radioGroup)
+                .labelsHidden()
+                if model.settings.menuBarStyle.showsReadings {
+                    ForEach(ReadingKind.allCases) { kind in
+                        Toggle(kind.title, isOn: readingBinding(kind))
+                    }
+                    if model.settings.menuBarStyle == .smartReadings {
+                        Text("CPU above 75%, memory pressure, battery under 20%, fast network or under 10 GB free. Otherwise your menu bar stays clean.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Section("Keyboard shortcut") {
+                Picker("Open Vitals with", selection: $model.settings.hotkey) {
+                    ForEach(HotkeyChoice.allCases) { Text($0.title).tag($0) }
+                }
+            }
+
+            Section("Tidy your menu bar") {
+                Text("Vitals can stand in for separate stats, keep-awake, battery and cleaner apps. Once you've quit those, tidy up what's left:")
+                    .font(.callout)
+                Label("Hold ⌘ and drag icons in the menu bar to reorder them.", systemImage: "arrow.left.and.right")
+                    .font(.callout)
+                Label("Switch off icons you don't need under “Allow in the Menu Bar”.", systemImage: "eye.slash")
+                    .font(.callout)
+                Button("Open Menu Bar Settings…") { SystemActions.openMenuBarSettings() }
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var styleBinding: Binding<MenuBarStyle> {
+        Binding(
+            get: { model.settings.menuBarStyle },
+            set: { style in
+                if style.isPro && !isPro { upgrade() } else { model.settings.menuBarStyle = style }
+            })
+    }
+
+    private func readingBinding(_ kind: ReadingKind) -> Binding<Bool> {
+        Binding(
+            get: { model.settings.readings.contains(kind) },
+            set: { on in
+                var list = model.settings.readings.filter { $0 != kind }
+                if on { list.append(kind) }
+                model.settings.readings = ReadingKind.allCases.filter { list.contains($0) }
+            })
+    }
+}
+
+// MARK: - Popover
+
+private struct PopoverSettings: View {
+    @ObservedObject var model: VitalsModel
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(PopoverSection.allCases) { section in
+                    Toggle(section.title, isOn: Binding(
+                        get: { !model.settings.hiddenSections.contains(section) },
+                        set: { on in
+                            if on { model.settings.hiddenSections.remove(section) }
+                            else { model.settings.hiddenSections.insert(section) }
+                        }))
+                }
+            } header: {
+                Text("Show in the popover")
+            } footer: {
+                Text("Alerts always show. Hide everything else for the calmest possible Vitals.")
+            }
+        }
+        .formStyle(.grouped)
     }
 }

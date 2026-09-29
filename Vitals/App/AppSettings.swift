@@ -2,13 +2,64 @@ import Combine
 import Foundation
 
 enum MenuBarStyle: String, Codable, CaseIterable, Identifiable {
-    case iconOnly, smart, readings
+    case iconOnly, smart, smartReadings, readings
     var id: String { rawValue }
     var title: String {
         switch self {
         case .iconOnly: "Icon only"
         case .smart: "Icon + reason when something's wrong"
-        case .readings: "Live readings"
+        case .smartReadings: "Readings only when they're high"
+        case .readings: "Live readings, always"
+        }
+    }
+    var isPro: Bool { self == .smartReadings || self == .readings }
+    var showsReadings: Bool { self == .smartReadings || self == .readings }
+}
+
+enum IconStyle: String, Codable, CaseIterable, Identifiable {
+    case pulse, heart, gauge, dot
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .pulse: "Pulse"
+        case .heart: "Heart"
+        case .gauge: "Gauge"
+        case .dot: "Dot"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .pulse: "waveform.path.ecg"
+        case .heart: "heart.fill"
+        case .gauge: "gauge.with.dots.needle.33percent"
+        case .dot: "circle.fill"
+        }
+    }
+    var isPro: Bool { self == .heart || self == .gauge }
+}
+
+enum PopoverSection: String, Codable, CaseIterable, Identifiable {
+    case batteryPlanner, vitals, freeUpSpace, topApps
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .batteryPlanner: "Battery forecast"
+        case .vitals: "Live readings grid"
+        case .freeUpSpace: "Free up space"
+        case .topApps: "Apps using your Mac"
+        }
+    }
+}
+
+enum HotkeyChoice: String, Codable, CaseIterable, Identifiable {
+    case none, optionCommandV, controlOptionV, controlOptionSpace
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .none: "None"
+        case .optionCommandV: "⌥⌘V"
+        case .controlOptionV: "⌃⌥V"
+        case .controlOptionSpace: "⌃⌥Space"
         }
     }
 }
@@ -34,6 +85,10 @@ struct AppSettings: Codable, Equatable {
     var notificationsEnabled = true
     var awayReportsEnabled = true
     var hasCompletedOnboarding = false
+    var iconStyle: IconStyle = .pulse
+    var hiddenSections: Set<PopoverSection> = []
+    var hotkey: HotkeyChoice = .none
+    var keepAwakeAllowsDisplaySleep = false
 
     init() {}
 
@@ -47,10 +102,15 @@ struct AppSettings: Codable, Equatable {
         notificationsEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .notificationsEnabled)) ?? d.notificationsEnabled
         awayReportsEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .awayReportsEnabled)) ?? d.awayReportsEnabled
         hasCompletedOnboarding = (try? c.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding)) ?? d.hasCompletedOnboarding
+        iconStyle = (try? c.decodeIfPresent(IconStyle.self, forKey: .iconStyle)) ?? d.iconStyle
+        hiddenSections = (try? c.decodeIfPresent(Set<PopoverSection>.self, forKey: .hiddenSections)) ?? d.hiddenSections
+        hotkey = (try? c.decodeIfPresent(HotkeyChoice.self, forKey: .hotkey)) ?? d.hotkey
+        keepAwakeAllowsDisplaySleep = (try? c.decodeIfPresent(Bool.self, forKey: .keepAwakeAllowsDisplaySleep)) ?? d.keepAwakeAllowsDisplaySleep
     }
 
     private enum CodingKeys: String, CodingKey {
         case detection, menuBarStyle, readings, notificationsEnabled, awayReportsEnabled, hasCompletedOnboarding
+        case iconStyle, hiddenSections, hotkey, keepAwakeAllowsDisplaySleep
     }
 
     private static let key = "vitals.settings.v2"

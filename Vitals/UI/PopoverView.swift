@@ -9,7 +9,7 @@ struct PopoverView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HeaderView(model: model)
+            HeaderView(model: model, keepAwake: model.keepAwake)
 
             if let message = model.message {
                 Label(message, systemImage: "info.circle")
@@ -43,15 +43,17 @@ struct PopoverView: View {
                                upgrade: { openSettings(.pro) })
             }
 
-            if let forecast = model.forecast {
+            if let forecast = model.forecast, show(.batteryPlanner) {
                 BatteryPlannerCard(forecast: forecast, isPro: license.isPro,
                                    quit: { model.quitAll($0) }, upgrade: { openSettings(.pro) })
             }
 
             if let snapshot = model.snapshot {
-                VitalsGrid(snapshot: snapshot)
-                ToolsRow(space: model.space, openSpace: { model.openWindow?(.space) })
-                TopAppsSection(snapshot: snapshot, quit: { model.quit($0) })
+                if show(.vitals) { VitalsGrid(snapshot: snapshot) }
+                if show(.freeUpSpace) {
+                    ToolsRow(space: model.space, openSpace: { model.openWindow?(.space) })
+                }
+                if show(.topApps) { TopAppsSection(snapshot: snapshot, quit: { model.quit($0) }) }
             }
 
             if let release = model.updates.available {
@@ -70,12 +72,17 @@ struct PopoverView: View {
         .frame(width: 368)
         .animation(.snappy, value: model.issues)
     }
+
+    private func show(_ section: PopoverSection) -> Bool {
+        !model.settings.hiddenSections.contains(section)
+    }
 }
 
 // MARK: - Header
 
 private struct HeaderView: View {
     @ObservedObject var model: VitalsModel
+    @ObservedObject var keepAwake: KeepAwake
 
     var body: some View {
         HStack(spacing: 12) {
@@ -90,6 +97,25 @@ private struct HeaderView: View {
                 Text(subtitle).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
+            Menu {
+                if keepAwake.isOn {
+                    Button("Stop keeping awake") { keepAwake.stop() }
+                    Divider()
+                }
+                Button("Keep awake for 30 minutes") { model.startKeepAwake(1800) }
+                Button("Keep awake for 1 hour") { model.startKeepAwake(3600) }
+                Button("Keep awake for 3 hours") { model.startKeepAwake(3 * 3600) }
+                Button("Keep awake until I turn it off") { model.startKeepAwake(nil) }
+                Divider()
+                Toggle("Let the display sleep", isOn: $model.settings.keepAwakeAllowsDisplaySleep)
+            } label: {
+                Image(systemName: keepAwake.isOn ? "cup.and.saucer.fill" : "cup.and.saucer")
+                    .foregroundStyle(keepAwake.isOn ? Color.orange : Color.secondary)
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help(keepAwake.statusText ?? "Keep your Mac awake")
         }
     }
 
@@ -104,7 +130,7 @@ private struct HeaderView: View {
 
     private var subtitle: String {
         guard let snap = model.snapshot else { return "Checking…" }
-        var parts = ["Watching quietly"]
+        var parts = [keepAwake.statusText ?? "Watching quietly"]
         if snap.thermal >= .fair { parts.append(snap.thermal.title) }
         if let battery = snap.battery {
             if battery.isOnAC {

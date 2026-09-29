@@ -15,12 +15,18 @@ final class VitalsModel: ObservableObject {
     @Published private(set) var forecast: BatteryForecast?
     @Published private(set) var leavingCheck: LeavingCheck?
     @Published var settings: AppSettings {
-        didSet { if settings != oldValue { settings.save() } }
+        didSet {
+            guard settings != oldValue else { return }
+            settings.save()
+            if settings.hotkey != oldValue.hotkey { hotKey.register(settings.hotkey) }
+        }
     }
 
     let license: LicenseManager
     let updates = UpdateChecker()
     let space = SpaceModel()
+    let keepAwake = KeepAwake()
+    let hotKey = HotKey()
     var openWindow: ((AppWindow) -> Void)?
     private var wasOnAC: Bool?
     let sampler = SystemSampler()
@@ -69,6 +75,7 @@ final class VitalsModel: ObservableObject {
             self?.engine.resetHistory()
         }
         presence.start()
+        hotKey.register(settings.hotkey)
         updates.checkIfNeeded()
         tick()
         schedule()
@@ -127,6 +134,10 @@ final class VitalsModel: ObservableObject {
         if settings.notificationsEnabled && license.isPro {
             Notifier.post(id: "leaving", title: check.headline, body: check.detail)
         }
+    }
+
+    func startKeepAwake(_ duration: TimeInterval?) {
+        keepAwake.start(for: duration, allowDisplaySleep: settings.keepAwakeAllowsDisplaySleep)
     }
 
     func dismissLeavingCheck() {
