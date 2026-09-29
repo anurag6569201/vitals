@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import Foundation
 
@@ -82,14 +83,28 @@ enum ReadingKind: String, Codable, CaseIterable, Identifiable {
     }
     var example: String {
         switch self {
-        case .cpu: "CPU 23%"
-        case .gpu: "GPU 41%"
-        case .memory: "MEM 64%"
-        case .download: "↓ 2.4 MB/s"
-        case .upload: "↑ 320 KB/s"
-        case .disk: "84 GB free"
-        case .topApp: "Chrome 45%"
+        case .cpu: "23%"
+        case .gpu: "41%"
+        case .memory: "64%"
+        case .download: "2.4 MB/s"
+        case .upload: "320 KB/s"
+        case .disk: "84 GB"
+        case .topApp: "45%"
         case .worldClock: "NYC 9:41"
+        }
+    }
+
+    /// SF Symbol shown in the menu bar instead of a text label.
+    var symbol: String {
+        switch self {
+        case .cpu: "cpu"
+        case .gpu: "square.3.layers.3d"
+        case .memory: "memorychip"
+        case .download: "arrow.down"
+        case .upload: "arrow.up"
+        case .disk: "internaldrive"
+        case .topApp: "app.fill"
+        case .worldClock: "globe"
         }
     }
 }
@@ -129,6 +144,14 @@ struct AppSettings: Codable, Equatable {
     var hotkey: HotkeyChoice = .none
     var keepAwakeAllowsDisplaySleep = false
     var worldClockZone = "America/New_York"
+    /// Menu-bar colors as hex ("#RRGGBB"). nil = follow the menu bar (light/dark automatically).
+    var iconColorHex: String?
+    var readingTextColorHex: String?
+    var readingIconColorHex: String?
+    /// Per-reading icon colors, keyed by ReadingKind raw value. Overrides readingIconColorHex.
+    var readingColors: [String: String] = [:]
+    /// Turn a reading orange when it's high (e.g. CPU over 75%).
+    var colorReadingsWhenHigh = true
 
     init() {}
 
@@ -147,11 +170,17 @@ struct AppSettings: Codable, Equatable {
         hotkey = (try? c.decodeIfPresent(HotkeyChoice.self, forKey: .hotkey)) ?? d.hotkey
         keepAwakeAllowsDisplaySleep = (try? c.decodeIfPresent(Bool.self, forKey: .keepAwakeAllowsDisplaySleep)) ?? d.keepAwakeAllowsDisplaySleep
         worldClockZone = (try? c.decodeIfPresent(String.self, forKey: .worldClockZone)) ?? d.worldClockZone
+        iconColorHex = (try? c.decodeIfPresent(String.self, forKey: .iconColorHex)) ?? nil
+        readingTextColorHex = (try? c.decodeIfPresent(String.self, forKey: .readingTextColorHex)) ?? nil
+        readingIconColorHex = (try? c.decodeIfPresent(String.self, forKey: .readingIconColorHex)) ?? nil
+        readingColors = (try? c.decodeIfPresent([String: String].self, forKey: .readingColors)) ?? d.readingColors
+        colorReadingsWhenHigh = (try? c.decodeIfPresent(Bool.self, forKey: .colorReadingsWhenHigh)) ?? d.colorReadingsWhenHigh
     }
 
     private enum CodingKeys: String, CodingKey {
         case detection, menuBarStyle, readings, notificationsEnabled, awayReportsEnabled, hasCompletedOnboarding
         case iconStyle, hiddenSections, hotkey, keepAwakeAllowsDisplaySleep, worldClockZone
+        case iconColorHex, readingTextColorHex, readingIconColorHex, readingColors, colorReadingsWhenHigh
     }
 
     private static let key = "vitals.settings.v2"
@@ -179,4 +208,34 @@ enum AwayReportStore {
     static func save(_ reports: [AwayReport]) {
         if let data = try? JSONEncoder().encode(Array(reports.prefix(20))) { UserDefaults.standard.set(data, forKey: key) }
     }
+}
+
+// MARK: - Colors
+
+extension NSColor {
+    /// "#RRGGBB" → color (sRGB). Returns nil for anything else.
+    convenience init?(hex: String?) {
+        guard var text = hex?.trimmingCharacters(in: .whitespaces), !text.isEmpty else { return nil }
+        if text.hasPrefix("#") { text.removeFirst() }
+        guard text.count == 6, let value = UInt32(text, radix: 16) else { return nil }
+        self.init(srgbRed: CGFloat((value >> 16) & 0xFF) / 255,
+                  green: CGFloat((value >> 8) & 0xFF) / 255,
+                  blue: CGFloat(value & 0xFF) / 255, alpha: 1)
+    }
+
+    var hexString: String {
+        guard let rgb = usingColorSpace(.sRGB) else { return "#FFFFFF" }
+        let r = Int((rgb.redComponent * 255).rounded()), g = Int((rgb.greenComponent * 255).rounded())
+        let b = Int((rgb.blueComponent * 255).rounded())
+        return String(format: "#%02X%02X%02X", max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, b)))
+    }
+}
+
+/// Ready-made swatches for the menu bar.
+enum MenuBarPalette {
+    static let swatches: [(name: String, hex: String)] = [
+        ("Green", "#34C759"), ("Mint", "#00C7BE"), ("Blue", "#0A84FF"), ("Indigo", "#5E5CE6"),
+        ("Purple", "#BF5AF2"), ("Pink", "#FF375F"), ("Red", "#FF453A"), ("Orange", "#FF9F0A"),
+        ("Yellow", "#FFD60A"), ("Gray", "#8E8E93"),
+    ]
 }

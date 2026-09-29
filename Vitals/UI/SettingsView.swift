@@ -288,7 +288,11 @@ private struct MenuBarSettings: View {
                             HStack {
                                 Text(kind.title)
                                 Spacer()
-                                Text(kind.example).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                                HStack(spacing: 3) {
+                                    Image(systemName: kind.symbol).imageScale(.small)
+                                    Text(kind.example).font(.caption.monospacedDigit())
+                                }
+                                .foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -303,6 +307,41 @@ private struct MenuBarSettings: View {
                         Text("CPU above 75%, memory pressure, battery under 20%, fast network or under 10 GB free. Otherwise your menu bar stays clean.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
+                }
+            }
+
+            Section {
+                ColorChoice(title: "Icon", hex: colorBinding(\.iconColorHex))
+                if model.settings.menuBarStyle.showsReadings {
+                    ColorChoice(title: "Reading text", hex: colorBinding(\.readingTextColorHex))
+                    ColorChoice(title: "Reading icons", hex: colorBinding(\.readingIconColorHex))
+                    Toggle("Turn a reading orange when it's high", isOn: Binding(
+                        get: { model.settings.colorReadingsWhenHigh },
+                        set: { value in if isPro { model.settings.colorReadingsWhenHigh = value } else { upgrade() } }))
+                    if !model.settings.readings.isEmpty {
+                        DisclosureGroup("Color each reading") {
+                            ForEach(model.settings.readings) { kind in
+                                ColorChoice(title: kind.title, symbol: kind.symbol, hex: readingColorBinding(kind))
+                            }
+                        }
+                    }
+                }
+                HStack {
+                    Text("Auto follows your menu bar, light or dark. Alerts always show in orange or red.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Reset colors") {
+                        model.settings.iconColorHex = nil
+                        model.settings.readingTextColorHex = nil
+                        model.settings.readingIconColorHex = nil
+                        model.settings.readingColors = [:]
+                        model.settings.colorReadingsWhenHigh = true
+                    }
+                }
+            } header: {
+                HStack(spacing: 6) {
+                    Text("Colors")
+                    if !isPro { ProBadge() }
                 }
             }
 
@@ -323,6 +362,21 @@ private struct MenuBarSettings: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private func colorBinding(_ keyPath: WritableKeyPath<AppSettings, String?>) -> Binding<String?> {
+        Binding(
+            get: { model.settings[keyPath: keyPath] },
+            set: { value in if isPro { model.settings[keyPath: keyPath] = value } else { upgrade() } })
+    }
+
+    private func readingColorBinding(_ kind: ReadingKind) -> Binding<String?> {
+        Binding(
+            get: { model.settings.readingColors[kind.rawValue] },
+            set: { value in
+                guard isPro else { upgrade(); return }
+                model.settings.readingColors[kind.rawValue] = value
+            })
     }
 
     private var styleBinding: Binding<MenuBarStyle> {
@@ -471,5 +525,57 @@ private struct MenuBarItemsSection: View {
             Text("Hidden icons stay one click away in the Vitals popover. While icons are hidden, hover over the clock to reach Notification Center. Quitting Vitals shows everything again.")
         }
         .onAppear { control.startAfterMenuBarAppears() }
+    }
+}
+
+// MARK: - Color picker row
+
+/// Automatic + a row of swatches + a custom color well.
+private struct ColorChoice: View {
+    let title: String
+    var symbol: String? = nil
+    @Binding var hex: String?
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let symbol {
+                Image(systemName: symbol).imageScale(.small).foregroundStyle(.secondary).frame(width: 16)
+            }
+            Text(title)
+            Spacer(minLength: 12)
+            swatch(nil, name: "Automatic")
+            ForEach(MenuBarPalette.swatches, id: \.hex) { swatch($0.hex, name: $0.name) }
+            ColorPicker("", selection: custom, supportsOpacity: false)
+                .labelsHidden()
+                .controlSize(.mini)
+                .frame(width: 26)
+                .help("Pick any color")
+        }
+    }
+
+    private func swatch(_ value: String?, name: String) -> some View {
+        let selected = (hex ?? "").uppercased() == (value ?? "").uppercased()
+        return Button { hex = value } label: {
+            Group {
+                if let value, let color = NSColor(hex: value) {
+                    Circle().fill(Color(nsColor: color))
+                } else {
+                    Circle()
+                        .fill(LinearGradient(colors: [.white, .black], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .overlay(Text("A").font(.system(size: 8, weight: .bold)).foregroundStyle(.gray))
+                }
+            }
+            .frame(width: 15, height: 15)
+            .overlay(Circle().stroke(selected ? Color.accentColor : Color.secondary.opacity(0.35),
+                                     lineWidth: selected ? 2 : 0.5).padding(-2.5))
+        }
+        .buttonStyle(.plain)
+        .help(name)
+    }
+
+    private var custom: Binding<Color> {
+        Binding(
+            get: { Color(nsColor: NSColor(hex: hex) ?? .labelColor) },
+            set: { hex = NSColor($0).hexString })
     }
 }

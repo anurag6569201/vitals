@@ -112,40 +112,90 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         #endif
         guard let button = statusItem.button else { return }
         let severity = model.severity
+        let colors = model.license.isPro ? model.settings : AppSettings()
         button.image = StatusIcon.image(severity: severity, style: model.settings.iconStyle,
-                                        awake: model.keepAwake.isOn)
+                                        awake: model.keepAwake.isOn,
+                                        tint: NSColor(hex: colors.iconColorHex))
         button.toolTip = tooltip()
 
-        var parts: [String] = []
         // While other icons are hidden, macOS turns off its overflow (») menu, so a wide item
-        // that doesn't fit would vanish. Stay icon-only then; alerts still show as color.
+        // that doesn't fit would vanish. Fall back to icon-only if there wasn't room.
         let compact = MenuBarControl.shared.isRestrictionActive && MenuBarControl.shared.prefersCompactIcon
         let style = compact ? MenuBarStyle.iconOnly : model.settings.menuBarStyle
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 11.5, weight: .medium)
+        var segments: [NSAttributedString] = []
         if style != .iconOnly, severity >= .warning, let top = model.issues.first {
-            parts.append(top.shortLabel)
+            segments.append(NSAttributedString(string: top.shortLabel, attributes: [
+                .font: font,
+                .foregroundColor: style.showsReadings ? NSColor.labelColor : StatusIcon.color(for: severity)
+            ]))
         }
         if style.showsReadings, model.license.isPro, let snap = model.snapshot {
             let onlyHigh = style == .smartReadings
-            parts.append(contentsOf: model.settings.readings.compactMap { reading(for: $0, snap, onlyWhenHigh: onlyHigh) })
+            for kind in model.settings.readings {
+                guard let value = reading(for: kind, snap, onlyWhenHigh: onlyHigh) else { continue }
+                let high = colors.colorReadingsWhenHigh && Self.isHigh(kind, snap)
+                let textColor = high ? NSColor.systemOrange : NSColor(hex: colors.readingTextColorHex)
+                let iconColor = high ? NSColor.systemOrange
+                    : NSColor(hex: colors.readingColors[kind.rawValue]) ?? NSColor(hex: colors.readingIconColorHex) ?? textColor
+                segments.append(Self.segment(icon: icon(for: kind, snap, color: iconColor), text: value,
+                                             font: font, color: textColor))
+            }
         }
-        let text = parts.joined(separator: "  ")
-        button.attributedTitle = NSAttributedString(string: text.isEmpty ? "" : " " + text, attributes: [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: 11.5, weight: .medium),
-            .foregroundColor: severity >= .warning && !parts.isEmpty && !style.showsReadings
-                ? StatusIcon.color(for: severity) : NSColor.labelColor
-        ])
+        let title = NSMutableAttributedString()
+        for (index, segment) in segments.enumerated() {
+            title.append(NSAttributedString(string: index == 0 ? " " : "   ", attributes: [.font: font]))
+            title.append(segment)
+        }
+        button.attributedTitle = title
+    }
+
+    /// One reading: a small icon followed by its value.
+    private static func segment(icon: NSImage?, text: String, font: NSFont, color: NSColor?) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        if let icon {
+            let attachment = NSTextAttachment()
+            attachment.image = icon
+            let height = icon.size.height
+            attachment.bounds = NSRect(x: 0, y: (font.capHeight - height) / 2,
+                                       width: icon.size.width, height: height)
+            result.append(NSAttributedString(attachment: attachment))
+            result.append(NSAttributedString(string: "\u{2009}", attributes: [.font: font]))
+        }
+        result.append(NSAttributedString(string: text, attributes: [.font: font, .foregroundColor: color ?? NSColor.labelColor]))
+        return result
+    }
+
+    /// Menu-bar glyph for a reading. Drawn at display time so it follows the menu bar's
+    /// light or dark appearance like the text next to it.
+    private func icon(for kind: ReadingKind, _ snap: SystemSnapshot, color: NSColor?) -> NSImage? {
+        if kind == .topApp, let path = snap.apps.first?.identity.bundlePath {
+            let appIcon = NSWorkspace.shared.icon(forFile: path)
+            appIcon.size = NSSize(width: 14, height: 14)
+            return appIcon
+        }
+        let config = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
+        guard let symbol = NSImage(systemSymbolName: kind.symbol, accessibilityDescription: kind.title)?
+            .withSymbolConfiguration(config) else { return nil }
+        let size = symbol.size
+        let image = NSImage(size: size, flipped: false) { rect in
+            symbol.tinted(color ?? NSColor.labelColor).draw(in: rect)
+            return true
+        }
+        image.accessibilityDescription = kind.title
+        return image
     }
 
     private func reading(for kind: ReadingKind, _ snap: SystemSnapshot, onlyWhenHigh: Bool) -> String? {
         if onlyWhenHigh && !Self.isHigh(kind, snap) { return nil }
         return switch kind {
-        case .cpu: "CPU \(Format.percent(snap.cpuTotal))"
-        case .gpu: snap.gpuUsage.map { "GPU \(Format.percent($0))" }
-        case .memory: "MEM \(Format.percent(snap.memoryUsed))"
-        case .download: "↓ \(Format.rate(snap.downloadRate))"
-        case .upload: "↑ \(Format.rate(snap.uploadRate))"
-        case .disk: snap.diskFreeBytes.map { "\(Format.diskBytes($0)) free" }
-        case .topApp: snap.apps.first.map { "\(Format.shortName($0.identity.name)) \(Format.cpu($0.cpuPercent))" }
+        case .cpu: Format.percent(snap.cpuTotal)
+        case .gpu: snap.gpuUsage.map { Format.percent($0) }
+        case .memory: Format.percent(snap.memoryUsed)
+        case .download: Format.rate(snap.downloadRate)
+        case .upload: Format.rate(snap.uploadRate)
+        case .disk: snap.diskFreeBytes.map { Format.diskBytes($0) }
+        case .topApp: snap.apps.first.map { Format.cpu($0.cpuPercent) }
         case .worldClock: "\(WorldClock.label(for: model.settings.worldClockZone)) \(WorldClock.time(in: model.settings.worldClockZone))"
         }
     }
@@ -182,19 +232,24 @@ enum StatusIcon {
 
     /// The chosen icon; a colored dot appears when there's something to see,
     /// and a small cup while Keep Awake is on.
-    static func image(severity: Severity, style: IconStyle = .pulse, awake: Bool = false) -> NSImage? {
+    static func image(severity: Severity, style: IconStyle = .pulse, awake: Bool = false, tint: NSColor? = nil) -> NSImage? {
         let pointSize: CGFloat = style == .dot ? 8 : 13
         let config = NSImage.SymbolConfiguration(pointSize: pointSize, weight: .semibold)
         guard let base = NSImage(systemSymbolName: style.symbol, accessibilityDescription: "Vitals")?
             .withSymbolConfiguration(config) else { return nil }
         let symbol = awake ? withCup(base) : base
         guard severity > .calm else {
-            symbol.isTemplate = true
-            return symbol
+            guard let tint else {
+                symbol.isTemplate = true
+                return symbol
+            }
+            let colored = symbol.tinted(tint)
+            colored.isTemplate = false
+            return colored
         }
         let size = NSSize(width: symbol.size.width + 4, height: max(symbol.size.height, 16))
         let dotColor = color(for: severity)
-        let tinted = symbol.tinted(severity >= .warning ? dotColor : NSColor.labelColor)
+        let tinted = symbol.tinted(severity >= .warning ? dotColor : (tint ?? NSColor.labelColor))
         let symbolSize = symbol.size
         let image = NSImage(size: size, flipped: false) { rect in
             let symbolRect = NSRect(x: 0, y: (rect.height - symbolSize.height) / 2,

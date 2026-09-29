@@ -297,6 +297,7 @@ final class MenuBarControl: ObservableObject {
     /// Copies this Vitals into /Applications and relaunches from there.
     func moveToApplications() {
         let destination = URL(fileURLWithPath: "/Applications").appendingPathComponent(Bundle.main.bundleURL.lastPathComponent)
+        guard Bundle.main.bundleURL.standardizedFileURL.path != destination.standardizedFileURL.path else { return }
         do {
             if FileManager.default.fileExists(atPath: destination.path) {
                 try FileManager.default.trashItem(at: destination, resultingItemURL: nil)
@@ -306,7 +307,7 @@ final class MenuBarControl: ObservableObject {
             // Close any other running Vitals so only the Applications copy is left.
             for other in NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
             where other.processIdentifier != ProcessInfo.processInfo.processIdentifier {
-                other.terminate()
+                other.forceTerminate()
             }
             bridge.restoreAll()
             let configuration = NSWorkspace.OpenConfiguration()

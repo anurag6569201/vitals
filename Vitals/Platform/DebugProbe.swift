@@ -126,7 +126,7 @@ enum DebugProbe {
                 if take("freeze-on") { freeze(true); log("frozen") }
                 if take("freeze-off") { freeze(false); log("unfrozen") }
                 if take("clear-all") { control.restoreAndClear(); log("cleared all") }
-                if take("move-now") { log("moving to Applications"); control.moveToApplications() }
+                if take("install-now") { log("moving to Applications"); control.moveToApplications() }
                 if take("quit-now") { log("quit"); NSApp.terminate(nil) }
                 if take("probe-now") { log("copies=\(NSWorkspace.shared.urlsForApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "").map(\.path)) default=\(NSWorkspace.shared.urlForApplication(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")?.path ?? "nil")"); log("hidden=\(control.hiddenIDs) system=\(control.hiddenSystemIDs) message=\(control.message ?? "nil") problem=\(String(describing: control.installProblem))"); probe("probe restricted=\(control.isRestrictionActive)", statusItem: statusItem) }
             }
