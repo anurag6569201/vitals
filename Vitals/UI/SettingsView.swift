@@ -387,6 +387,20 @@ private struct MenuBarItemsSection: View {
                     .font(.callout)
                 Button("Allow Accessibility…") { control.requestAccessibility() }
             } else {
+                if let problem = control.installProblem {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(problem.explanation, systemImage: "exclamationmark.triangle.fill")
+                            .font(.callout)
+                            .foregroundStyle(.orange)
+                        HStack {
+                            if problem == .notInApplications {
+                                Button("Move Vitals to Applications") { control.moveToApplications() }
+                            }
+                            Button("Show in Finder") { control.showInstallProblemInFinder() }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
                 if control.apps.isEmpty {
                     Text(control.isScanning ? "Looking at your menu bar…" : (control.message ?? "No third-party icons found."))
                         .font(.callout).foregroundStyle(.secondary)
@@ -441,7 +455,7 @@ private struct MenuBarItemsSection: View {
                     Spacer()
                     Button("Reset all") { control.restoreAndClear() }
                 }
-                if let message = control.message, !control.apps.isEmpty {
+                if let message = control.message, !control.apps.isEmpty, message != control.installProblem?.explanation {
                     Text(message).font(.caption).foregroundStyle(.secondary)
                 }
             }

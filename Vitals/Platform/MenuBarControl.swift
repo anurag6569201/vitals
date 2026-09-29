@@ -242,6 +242,7 @@ final class MenuBarControl: ObservableObject {
     func startAfterMenuBarAppears() {
         guard !hasStarted else { return }
         hasStarted = true
+        LSRegisterURL(Bundle.main.bundleURL as CFURL, true)
         // Do not start the assessment-mode restriction before AppKit has installed
         // Vitals' own status item, or the user can lose the menu-bar entry point.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { [weak self] in
@@ -249,6 +250,71 @@ final class MenuBarControl: ObservableObject {
             NSLog("Vitals status item initialized; scanning menu-bar icons")
             self.refresh()
             self.watchClock()
+        }
+    }
+
+    /// Why hiding icons would also hide Vitals' own icon on this Mac, if it would.
+    enum InstallProblem: Equatable {
+        case otherCopy(URL)
+        case notInApplications
+
+        var explanation: String {
+            switch self {
+            case .otherCopy(let url):
+                return "Another copy of Vitals is on this Mac (\(url.deletingLastPathComponent().path)). macOS matches menu-bar icons by app, so hiding icons would hide Vitals too. Delete the other copy, then try again."
+            case .notInApplications:
+                return "Vitals isn't in your Applications folder. macOS only keeps Vitals' own icon visible while hiding others when Vitals runs from Applications."
+            }
+        }
+    }
+
+    /// MenuBarAgent resolves allow-listed bundle IDs through Launch Services. If our bundle ID
+    /// resolves to a different copy of Vitals, or this copy is not in an Applications folder,
+    /// the restriction hides Vitals' own status item along with everything else.
+    var installProblem: InstallProblem? {
+        let me = Bundle.main.bundleURL.resolvingSymlinksInPath().standardizedFileURL
+        if let id = Bundle.main.bundleIdentifier,
+           let resolved = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)?
+               .resolvingSymlinksInPath().standardizedFileURL,
+           resolved.path != me.path {
+            return .otherCopy(resolved)
+        }
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let inApplications = me.path.hasPrefix("/Applications/") || me.path.hasPrefix(home + "/Applications/")
+        return inApplications ? nil : .notInApplications
+    }
+
+    func showInstallProblemInFinder() {
+        switch installProblem {
+        case .otherCopy(let url): NSWorkspace.shared.activateFileViewerSelecting([url])
+        case .notInApplications: NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
+        case nil: break
+        }
+    }
+
+    /// Copies this Vitals into /Applications and relaunches from there.
+    func moveToApplications() {
+        let destination = URL(fileURLWithPath: "/Applications").appendingPathComponent(Bundle.main.bundleURL.lastPathComponent)
+        do {
+            if FileManager.default.fileExists(atPath: destination.path) {
+                try FileManager.default.trashItem(at: destination, resultingItemURL: nil)
+            }
+            try FileManager.default.copyItem(at: Bundle.main.bundleURL, to: destination)
+            LSRegisterURL(destination as CFURL, true)
+            bridge.restoreAll()
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.createsNewApplicationInstance = true
+            NSWorkspace.shared.openApplication(at: destination, configuration: configuration) { _, error in
+                DispatchQueue.main.async {
+                    if let error {
+                        self.message = "Couldn't open Vitals from Applications: \(error.localizedDescription)"
+                    } else {
+                        NSApp.terminate(nil)
+                    }
+                }
+            }
+        } catch {
+            message = "Couldn't copy Vitals to Applications: \(error.localizedDescription). Drag Vitals into Applications yourself, then open it from there."
         }
     }
 
@@ -526,7 +592,7 @@ final class MenuBarControl: ObservableObject {
             self.bridge.restoreAll()
             self.isRestrictionActive = false
             self.isRevealed = true
-            self.message = "macOS hid Vitals' own icon too, so Vitals showed everything again. Try hiding fewer icons, or quit an app you don't need."
+            self.message = "There wasn't room for Vitals' own icon, so Vitals showed everything again. Hold ⌘ and drag the Vitals icon further right, then try again."
         }
     }
 
@@ -635,6 +701,26 @@ final class MenuBarControl: ObservableObject {
             isApplying = false
             isRestrictionActive = false
             completion?(true)
+            return
+        }
+        if let problem = installProblem {
+            bridge.restoreAll()
+            isApplying = false
+            isRestrictionActive = false
+            if let rollbackApps {
+                hiddenIDs = rollbackApps
+                UserDefaults.standard.set(rollbackApps.sorted(), forKey: storageKey)
+            }
+            if let rollbackSystem {
+                hiddenSystemIDs = rollbackSystem
+                UserDefaults.standard.set(rollbackSystem.sorted(), forKey: systemStorageKey)
+            }
+            if let rollbackHub {
+                hubOrder = rollbackHub
+                saveHubOrder()
+            }
+            message = problem.explanation
+            completion?(false)
             return
         }
         // Assessment mode is an allow-list. Include all currently running apps and Apple agents

@@ -36,11 +36,20 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
         model.objectWillChange
             .merge(with: model.keepAwake.objectWillChange)
+            .merge(with: MenuBarControl.shared.objectWillChange)
             .debounce(for: .milliseconds(50), scheduler: RunLoop.main)
             .sink { [weak self] _ in self?.render() }
             .store(in: &cancellables)
         HotKey.action = { [weak self] in self?.toggle(nil) }
         MenuBarControl.shared.isOwnItemVisible = { [weak self] in self?.isVisibleOnScreen ?? true }
+        #if DEBUG
+        if DebugProbe.flag("debug-hide-experiment") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+                guard let self else { return }
+                DebugProbe.runHideExperiment(statusItem: self.statusItem, freeze: { [weak self] in self?.setFrozen($0) })
+            }
+        }
+        #endif
         render()
     }
 
@@ -48,8 +57,13 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     var isVisibleOnScreen: Bool {
         guard let window = statusItem.button?.window, window.isVisible else { return false }
         let frame = window.frame
-        guard frame.width > 1 else { return false }
-        return NSScreen.screens.contains { $0.frame.intersects(frame) }
+        guard frame.width > 1, let screen = window.screen ?? NSScreen.screens.first(where: { $0.frame.intersects(frame) })
+        else { return false }
+        // On notched MacBooks, anything left of the notch's right edge is hidden behind it or the app menus.
+        if let right = screen.auxiliaryTopRightArea {
+            return frame.minX >= right.minX - 2 && frame.maxX <= right.maxX + 2
+        }
+        return screen.frame.contains(frame)
     }
 
     func showPopover() {
@@ -78,7 +92,24 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     // MARK: Rendering
 
+    #if DEBUG
+    private var frozen = false
+    func setFrozen(_ on: Bool) {
+        frozen = on
+        if on {
+            statusItem.length = 26
+            statusItem.button?.attributedTitle = NSAttributedString(string: "")
+        } else {
+            statusItem.length = NSStatusItem.variableLength
+            render()
+        }
+    }
+    #endif
+
     private func render() {
+        #if DEBUG
+        if frozen { return }
+        #endif
         guard let button = statusItem.button else { return }
         let severity = model.severity
         button.image = StatusIcon.image(severity: severity, style: model.settings.iconStyle,
@@ -86,7 +117,10 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         button.toolTip = tooltip()
 
         var parts: [String] = []
-        let style = model.settings.menuBarStyle
+        // While other icons are hidden, macOS turns off its overflow (») menu, so a wide item
+        // that doesn't fit would vanish. Stay icon-only then; alerts still show as color.
+        let compact = MenuBarControl.shared.isRestrictionActive || MenuBarControl.shared.isApplying
+        let style = compact ? MenuBarStyle.iconOnly : model.settings.menuBarStyle
         if style != .iconOnly, severity >= .warning, let top = model.issues.first {
             parts.append(top.shortLabel)
         }
