@@ -43,6 +43,9 @@ Things marked **you** need your accounts, money or identity; everything else is 
       finishes; select an item → Move to Trash → it appears in the Trash and can be put back.
 - [ ] Duplicates: copy a 50 MB file to two folders → both show, newest marked KEEP, the other pre-selected.
 - [ ] App icon shows in Finder, the Dock (while Settings is open) and the About tab.
+- [ ] Menu Bar tab → Allow Accessibility → icons listed → switch one off → it disappears and shows under
+      "Menu bar" in the popover → click it there and its menu opens → quit Vitals → every icon is back.
+- [ ] Hover over the clock while icons are hidden → Notification Center still opens.
 - [ ] Energy check: Vitals itself should sit well under 1% CPU in Activity Monitor when the popover is closed.
 
 ## 5. Distribution channels (in order)

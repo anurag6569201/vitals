@@ -18,6 +18,10 @@ struct PopoverView: View {
                     .transition(.opacity)
             }
 
+            if show(.menuBarItems) {
+                MenuBarShortcuts(control: MenuBarControl.shared)
+            }
+
             if let check = model.leavingCheck {
                 LeavingCheckCard(check: check, isPro: license.isPro,
                                  quitAll: { model.quitAll(check.all); model.dismissLeavingCheck() },

@@ -243,6 +243,7 @@ private struct MenuBarSettings: View {
     @ObservedObject var model: VitalsModel
     let isPro: Bool
     let upgrade: () -> Void
+    @ObservedObject private var control = MenuBarControl.shared
 
     var body: some View {
         Form {
@@ -283,7 +284,20 @@ private struct MenuBarSettings: View {
                 .labelsHidden()
                 if model.settings.menuBarStyle.showsReadings {
                     ForEach(ReadingKind.allCases) { kind in
-                        Toggle(kind.title, isOn: readingBinding(kind))
+                        Toggle(isOn: readingBinding(kind)) {
+                            HStack {
+                                Text(kind.title)
+                                Spacer()
+                                Text(kind.example).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    if model.settings.readings.contains(.worldClock) {
+                        Picker("Time zone", selection: $model.settings.worldClockZone) {
+                            ForEach(WorldClock.zones, id: \.id) { zone in
+                                Text("\(zone.label) — \(zone.id.replacingOccurrences(of: "_", with: " "))").tag(zone.id)
+                            }
+                        }
                     }
                     if model.settings.menuBarStyle == .smartReadings {
                         Text("CPU above 75%, memory pressure, battery under 20%, fast network or under 10 GB free. Otherwise your menu bar stays clean.")
@@ -298,14 +312,14 @@ private struct MenuBarSettings: View {
                 }
             }
 
-            Section("Tidy your menu bar") {
-                Text("Vitals can stand in for separate stats, keep-awake, battery and cleaner apps. Once you've quit those, tidy up what's left:")
-                    .font(.callout)
+            MenuBarItemsSection(control: control, isPro: isPro, upgrade: upgrade)
+
+            Section("Tidy tips") {
                 Label("Hold ⌘ and drag icons in the menu bar to reorder them.", systemImage: "arrow.left.and.right")
                     .font(.callout)
-                Label("Switch off icons you don't need under “Allow in the Menu Bar”.", systemImage: "eye.slash")
+                Label("Vitals can replace separate stats, keep-awake and cleaner apps — quit those for a calmer menu bar.", systemImage: "square.stack.3d.down.right")
                     .font(.callout)
-                Button("Open Menu Bar Settings…") { SystemActions.openMenuBarSettings() }
+                Button("Open macOS Menu Bar Settings…") { SystemActions.openMenuBarSettings() }
             }
         }
         .formStyle(.grouped)
@@ -353,5 +367,95 @@ private struct PopoverSettings: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+// MARK: - Other apps' menu bar icons
+
+private struct MenuBarItemsSection: View {
+    @ObservedObject var control: MenuBarControl
+    let isPro: Bool
+    let upgrade: () -> Void
+
+    var body: some View {
+        Section {
+            if !control.isSupported {
+                Text("Hiding other apps' icons from Vitals needs macOS 27. You can still switch icons off in macOS settings.")
+                    .font(.callout).foregroundStyle(.secondary)
+            } else if !control.isTrusted {
+                Text("To see and tidy the icons in your menu bar, Vitals needs Accessibility permission. Vitals only reads menu-bar icons.")
+                    .font(.callout)
+                Button("Allow Accessibility…") { control.requestAccessibility() }
+            } else {
+                if control.apps.isEmpty {
+                    Text(control.isScanning ? "Looking at your menu bar…" : (control.message ?? "No third-party icons found."))
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+                ForEach(control.apps) { app in
+                    HStack(spacing: 10) {
+                        Image(nsImage: app.icon ?? NSImage(systemSymbolName: "app", accessibilityDescription: nil) ?? NSImage())
+                            .resizable().frame(width: 20, height: 20)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(app.name)
+                            if control.hiddenIDs.contains(app.id) {
+                                Text("Hidden · one click away in the Vitals popover").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        Button {
+                            control.setInHub(!control.isInHub(app.id), for: app.id)
+                        } label: {
+                            Image(systemName: control.isInHub(app.id) ? "star.fill" : "star")
+                                .foregroundStyle(control.isInHub(app.id) ? Color.yellow : Color.secondary)
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Keep a shortcut to this icon in the Vitals popover")
+                        .disabled(control.hiddenIDs.contains(app.id))
+                        Toggle("Show", isOn: Binding(
+                            get: { !control.hiddenIDs.contains(app.id) },
+                            set: { show in
+                                if !show && !isPro { upgrade() } else { control.setHidden(!show, for: app.id) }
+                            }))
+                            .toggleStyle(.switch).labelsHidden()
+                            .disabled(control.isApplying)
+                    }
+                }
+                DisclosureGroup("Apple controls") {
+                    ForEach(ControlledSystemItem.allCases) { item in
+                        Toggle(isOn: Binding(
+                            get: { !control.hiddenSystemIDs.contains(item.id) },
+                            set: { show in
+                                if !show && !isPro { upgrade() } else { control.setSystemHidden(!show, for: item.id) }
+                            })) {
+                            Label(item.title, systemImage: item.symbol)
+                        }
+                        .toggleStyle(.switch)
+                        .disabled(control.isApplying)
+                    }
+                }
+                HStack {
+                    Button(control.isRevealed ? "Hide again" : "Show everything for now") {
+                        if control.isRevealed { control.hideAgain() } else { control.reveal() }
+                    }
+                    Button("Refresh") { control.refresh() }
+                    Spacer()
+                    Button("Reset all") { control.restoreAndClear() }
+                }
+                if let message = control.message, !control.apps.isEmpty {
+                    Text(message).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            HStack(spacing: 6) {
+                Text("Your menu bar icons")
+                Text("BETA").font(.system(size: 9, weight: .bold))
+                    .padding(.horizontal, 5).padding(.vertical, 1)
+                    .background(Color.orange.opacity(0.2), in: Capsule()).foregroundStyle(.orange)
+                if !isPro { ProBadge() }
+            }
+        } footer: {
+            Text("Hidden icons stay one click away in the Vitals popover. While icons are hidden, hover over the clock to reach Notification Center. Quitting Vitals shows everything again.")
+        }
+        .onAppear { control.startAfterMenuBarAppears() }
     }
 }

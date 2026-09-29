@@ -97,10 +97,13 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         if onlyWhenHigh && !Self.isHigh(kind, snap) { return nil }
         return switch kind {
         case .cpu: "CPU \(Format.percent(snap.cpuTotal))"
+        case .gpu: snap.gpuUsage.map { "GPU \(Format.percent($0))" }
         case .memory: "MEM \(Format.percent(snap.memoryUsed))"
-        case .battery: snap.battery.map { "BAT \(Format.percent($0.level))" }
-        case .network: "↓\(Format.rate(snap.downloadRate))"
+        case .download: "↓ \(Format.rate(snap.downloadRate))"
+        case .upload: "↑ \(Format.rate(snap.uploadRate))"
         case .disk: snap.diskFreeBytes.map { "\(Format.diskBytes($0)) free" }
+        case .topApp: snap.apps.first.map { "\(Format.shortName($0.identity.name)) \(Format.cpu($0.cpuPercent))" }
+        case .worldClock: "\(WorldClock.label(for: model.settings.worldClockZone)) \(WorldClock.time(in: model.settings.worldClockZone))"
         }
     }
 
@@ -108,10 +111,13 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     static func isHigh(_ kind: ReadingKind, _ snap: SystemSnapshot) -> Bool {
         switch kind {
         case .cpu: snap.cpuTotal >= 0.75
+        case .gpu: (snap.gpuUsage ?? 0) >= 0.75
         case .memory: snap.memoryPressure >= .warning
-        case .battery: snap.battery.map { !$0.isOnAC && $0.level < 0.2 } ?? false
-        case .network: snap.downloadRate >= 5_000_000 || snap.uploadRate >= 2_000_000
+        case .download: snap.downloadRate >= 5_000_000
+        case .upload: snap.uploadRate >= 2_000_000
         case .disk: (snap.diskFreeBytes ?? .max) < 10_000_000_000
+        case .topApp: (snap.apps.first?.cpuPercent ?? 0) >= 80
+        case .worldClock: true
         }
     }
 

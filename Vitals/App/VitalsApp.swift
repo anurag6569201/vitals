@@ -31,6 +31,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = StatusItemController(model: model, windows: windows)
         model.openWindow = { [weak self] window in self?.windows.show(window) }
         model.start()
+        let menuBar = MenuBarControl.shared
+        if !menuBar.hiddenIDs.isEmpty || !menuBar.hiddenSystemIDs.isEmpty || !menuBar.hubOrder.isEmpty {
+            menuBar.startAfterMenuBarAppears()
+        }
 
         if !model.settings.hasCompletedOnboarding {
             windows.showOnboarding { [weak self] in
@@ -45,6 +49,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         windows.showSettings(tab: .general)
         return true
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // Always give every menu-bar icon back when Vitals quits.
+        MenuBarControl.shared.stop()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }

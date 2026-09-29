@@ -18,7 +18,8 @@ When something actually needs you, it says what's wrong in plain English and off
 - **Free Up Space** — finds what's eating your disk, for everyone, not just developers: large files (with last-opened dates), old downloads, installers and already-unzipped archives, old screenshots and recordings, true duplicates (verified by full hash), apps you haven't opened in 3 months, app caches and leftovers of deleted apps, developer junk, old iPhone updates, and the Trash. Everything goes to the Trash, never straight to deletion. Reviewing is free; one-click clearing is Pro.
 
 - **Keep Awake** — 30 min / 1 h / 3 h / until off, with an option to let the display sleep. Replaces a separate caffeine app.
-- **Your menu bar, your way** — icon styles (Pulse, Dot free; Heart, Gauge Pro), "readings only when they're high" (Pro), a global shortcut to open Vitals, a choice of popover sections, and a Tidy-your-menu-bar helper.
+- **Your menu bar, your way** — icon styles (Pulse, Dot free; Heart, Gauge Pro); readings for CPU, GPU, memory, download, upload, disk, busiest app and a second time zone, shown always or "only when they're high" (Pro); a global shortcut; a choice of popover sections.
+- **Tidy other apps' icons** *(Pro, beta, macOS 27)* — see every menu-bar icon in Settings › Menu Bar, switch any of them (or Apple controls) off, and reach hidden ones from the Vitals popover in one click. Uses Accessibility plus the private MenuBarClientCore bridge from the original prototype (adapted from MenuBarHider, MIT). Quitting Vitals always shows everything again.
 
 Plus a compact live dashboard (CPU, memory, battery draw, disk, network, uptime) and the apps using your Mac right now.
 
@@ -45,9 +46,9 @@ Requires macOS 14+. No dependencies. Open `Vitals.xcodeproj` and run.
 
 Everything stays on the Mac. No analytics. The only network calls are license activation and the daily update check.
 
-## Labs
+## Third-party code
 
-`Labs/` keeps the earlier experimental menu-bar icon-hiding bridge (private `MenuBarClientCore` API, macOS 27),
-adapted from MenuBarHider (MIT). It is **not** compiled into Vitals.
+The macOS 27 icon-hiding bridge in `Vitals/Platform/MenuBarControl.swift` is adapted from MenuBarHider (MIT) —
+see `THIRD_PARTY_NOTICES.md`. It relies on a private framework, so it is labelled beta and can break with macOS updates.
 
 See `RELEASE.md` to ship and `MARKETING.md` for positioning and launch copy.

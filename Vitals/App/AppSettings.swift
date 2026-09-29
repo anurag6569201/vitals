@@ -39,10 +39,11 @@ enum IconStyle: String, Codable, CaseIterable, Identifiable {
 }
 
 enum PopoverSection: String, Codable, CaseIterable, Identifiable {
-    case batteryPlanner, vitals, freeUpSpace, topApps
+    case menuBarItems, batteryPlanner, vitals, freeUpSpace, topApps
     var id: String { rawValue }
     var title: String {
         switch self {
+        case .menuBarItems: "Menu bar shortcuts"
         case .batteryPlanner: "Battery forecast"
         case .vitals: "Live readings grid"
         case .freeUpSpace: "Free up space"
@@ -65,16 +66,54 @@ enum HotkeyChoice: String, Codable, CaseIterable, Identifiable {
 }
 
 enum ReadingKind: String, Codable, CaseIterable, Identifiable {
-    case cpu, memory, battery, network, disk
+    case cpu, gpu, memory, download, upload, disk, topApp, worldClock
     var id: String { rawValue }
     var title: String {
         switch self {
         case .cpu: "CPU"
+        case .gpu: "GPU"
         case .memory: "Memory"
-        case .battery: "Battery"
-        case .network: "Network"
+        case .download: "Download speed"
+        case .upload: "Upload speed"
         case .disk: "Disk free"
+        case .topApp: "Busiest app"
+        case .worldClock: "Second time zone"
         }
+    }
+    var example: String {
+        switch self {
+        case .cpu: "CPU 23%"
+        case .gpu: "GPU 41%"
+        case .memory: "MEM 64%"
+        case .download: "↓ 2.4 MB/s"
+        case .upload: "↑ 320 KB/s"
+        case .disk: "84 GB free"
+        case .topApp: "Chrome 45%"
+        case .worldClock: "NYC 9:41"
+        }
+    }
+}
+
+enum WorldClock {
+    static let zones: [(id: String, label: String)] = [
+        ("America/Los_Angeles", "SF"), ("America/Denver", "DEN"), ("America/Chicago", "CHI"),
+        ("America/New_York", "NYC"), ("America/Sao_Paulo", "SAO"), ("Europe/London", "LON"),
+        ("Europe/Paris", "PAR"), ("Europe/Berlin", "BER"), ("Africa/Lagos", "LOS"), ("Europe/Moscow", "MOW"),
+        ("Asia/Dubai", "DXB"), ("Asia/Kolkata", "IND"), ("Asia/Singapore", "SIN"), ("Asia/Shanghai", "SHA"),
+        ("Asia/Tokyo", "TYO"), ("Australia/Sydney", "SYD"), ("Pacific/Auckland", "AKL"), ("UTC", "UTC"),
+    ]
+
+    static func label(for id: String) -> String {
+        zones.first { $0.id == id }?.label
+            ?? String(id.split(separator: "/").last ?? "").replacingOccurrences(of: "_", with: " ").prefix(8).uppercased()
+    }
+
+    static func time(in id: String, at date: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.timeZone = TimeZone(identifier: id)
+        formatter.dateFormat = "H:mm"
+        formatter.setLocalizedDateFormatFromTemplate("jmm")
+        return formatter.string(from: date)
     }
 }
 
@@ -89,6 +128,7 @@ struct AppSettings: Codable, Equatable {
     var hiddenSections: Set<PopoverSection> = []
     var hotkey: HotkeyChoice = .none
     var keepAwakeAllowsDisplaySleep = false
+    var worldClockZone = "America/New_York"
 
     init() {}
 
@@ -106,11 +146,12 @@ struct AppSettings: Codable, Equatable {
         hiddenSections = (try? c.decodeIfPresent(Set<PopoverSection>.self, forKey: .hiddenSections)) ?? d.hiddenSections
         hotkey = (try? c.decodeIfPresent(HotkeyChoice.self, forKey: .hotkey)) ?? d.hotkey
         keepAwakeAllowsDisplaySleep = (try? c.decodeIfPresent(Bool.self, forKey: .keepAwakeAllowsDisplaySleep)) ?? d.keepAwakeAllowsDisplaySleep
+        worldClockZone = (try? c.decodeIfPresent(String.self, forKey: .worldClockZone)) ?? d.worldClockZone
     }
 
     private enum CodingKeys: String, CodingKey {
         case detection, menuBarStyle, readings, notificationsEnabled, awayReportsEnabled, hasCompletedOnboarding
-        case iconStyle, hiddenSections, hotkey, keepAwakeAllowsDisplaySleep
+        case iconStyle, hiddenSections, hotkey, keepAwakeAllowsDisplaySleep, worldClockZone
     }
 
     private static let key = "vitals.settings.v2"

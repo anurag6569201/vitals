@@ -127,3 +127,59 @@ struct ToolsRow: View {
         .buttonStyle(.plain)
     }
 }
+
+/// One-click access to menu-bar icons you've hidden (or starred) from the Menu Bar settings.
+struct MenuBarShortcuts: View {
+    @ObservedObject var control: MenuBarControl
+
+    private var systemItems: [ControlledSystemItem] {
+        ControlledSystemItem.allCases.filter { control.hiddenSystemIDs.contains($0.id) }
+    }
+
+    var body: some View {
+        if !control.hubApps.isEmpty || !systemItems.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Menu bar").font(.system(size: 12, weight: .semibold))
+                    Spacer()
+                    if control.isRevealed {
+                        Button("Hide again") { control.hideAgain() }.buttonStyle(.borderless).font(.caption)
+                    }
+                }
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
+                    ForEach(control.hubApps) { app in
+                        ForEach(app.items) { item in
+                            tile(title: app.itemCount > 1 ? item.title : app.name,
+                                 image: Image(nsImage: app.icon ?? NSImage()),
+                                 busy: control.openingItemID == item.id) {
+                                control.openAppMenu(app.id, itemIndex: item.index)
+                            }
+                        }
+                    }
+                    ForEach(systemItems) { item in
+                        tile(title: item.title, image: Image(systemName: item.symbol),
+                             busy: control.openingItemID == "system#\(item.id)") {
+                            control.openSystemMenu(item)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func tile(title: String, image: Image, busy: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                ZStack {
+                    image.resizable().scaledToFit().frame(width: 20, height: 20)
+                    if busy { ProgressView().controlSize(.mini) }
+                }
+                .frame(width: 34, height: 30)
+                .background(Color(nsColor: .controlBackgroundColor).opacity(0.6), in: RoundedRectangle(cornerRadius: 8))
+                Text(title).font(.system(size: 9)).lineLimit(1).foregroundStyle(.secondary)
+            }
+        }
+        .buttonStyle(.plain)
+        .help(title)
+    }
+}

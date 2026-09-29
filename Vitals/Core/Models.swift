@@ -161,6 +161,8 @@ struct BatteryState: Hashable {
 struct SystemSnapshot {
     var date: Date
     var cpuTotal: Double
+    /// 0...1, nil if the GPU doesn't report it.
+    var gpuUsage: Double?
     var memoryUsed: Double
     var memoryPressure: MemoryPressureLevel
     var swapUsedBytes: UInt64

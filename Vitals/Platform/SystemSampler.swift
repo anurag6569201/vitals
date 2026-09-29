@@ -28,6 +28,7 @@ final class SystemSampler {
         return SystemSnapshot(
             date: now,
             cpuTotal: cpuTotal() ?? 0,
+            gpuUsage: gpuUsage(),
             memoryUsed: memoryUsed() ?? 0,
             memoryPressure: memoryPressure(),
             swapUsedBytes: swapUsed(),
@@ -82,6 +83,25 @@ final class SystemSampler {
         let app = Double(stats.internal_page_count) - Double(stats.purgeable_count)
         let used = (app + Double(stats.wire_count) + Double(stats.compressor_page_count)) * pageSize
         return min(max(used / total, 0), 1)
+    }
+
+    /// GPU utilization from the IOAccelerator's performance statistics (Apple silicon and most Intel/AMD GPUs).
+    private func gpuUsage() -> Double? {
+        var iterator: io_iterator_t = 0
+        guard IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("IOAccelerator"), &iterator) == KERN_SUCCESS else { return nil }
+        defer { IOObjectRelease(iterator) }
+        var best: Double?
+        var service = IOIteratorNext(iterator)
+        while service != 0 {
+            if let stats = IORegistryEntryCreateCFProperty(service, "PerformanceStatistics" as CFString, kCFAllocatorDefault, 0)?
+                .takeRetainedValue() as? [String: Any] {
+                let value = (stats["Device Utilization %"] ?? stats["GPU Activity(%)"]) as? NSNumber
+                if let value { best = max(best ?? 0, min(value.doubleValue / 100, 1)) }
+            }
+            IOObjectRelease(service)
+            service = IOIteratorNext(iterator)
+        }
+        return best
     }
 
     private func memoryPressure() -> MemoryPressureLevel {
