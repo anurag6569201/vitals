@@ -77,6 +77,12 @@ final class LicenseManager: ObservableObject {
     }
 
     func refreshState() {
+        #if DEBUG && APPSTORE
+        // Testing the App Store edition from Xcode: Pro is unlocked. Never in archived builds
+        // (the AppStore configuration has no DEBUG flag).
+        state = .pro
+        return
+        #endif
         let owned = usesAppStore ? defaults.bool(forKey: Keys.storePro) : (licenseKey != nil)
         if owned {
             state = .pro
