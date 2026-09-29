@@ -459,7 +459,7 @@ private struct FooterView: View {
                     .buttonStyle(.borderless)
                     .font(.caption)
             case .free:
-                Button("Upgrade to Pro") { openSettings(.pro) }
+                Button(license.canStartTrial ? "Try Pro free" : "Get Pro · \(license.priceText)") { openSettings(.pro) }
                     .buttonStyle(.borderless)
                     .font(.caption.weight(.semibold))
             }

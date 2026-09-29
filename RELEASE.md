@@ -12,7 +12,7 @@ Things marked **you** need your accounts, money or identity; everything else is 
       xcrun notarytool store-credentials vitals-notary --apple-id <you> --team-id X5H55SY52K --password <app-specific-password>
       ```
 - [ ] **you** — Lemon Squeezy store (merchant of record: handles VAT/GST, pays out to you). Confirm payouts work for your country.
-      Create product **Vitals Pro**, price $12.99 (launch: $9.99 with a discount code), enable **License keys**,
+      Create product **Vitals Pro**, price **$5.99** (single payment), enable **License keys**,
       activation limit 3. Copy the checkout link.
 - [ ] Put the checkout link (and optionally your store id) in `Vitals/Licensing/LicenseManager.swift` → `LicenseConfig`.
 
@@ -69,7 +69,7 @@ contains no private-framework code.
 
 ### App Store submission checklist
 1. App Store Connect › Vitals › **In-App Purchases** › create two **Non-Consumable** items:
-   - `com.anuragsingh.vitals.pro` — "Vitals Pro", your price (e.g. $12.99).
+   - `com.anuragsingh.vitals.pro` — "Vitals Pro", price **$5.99** (App Store Connect › Pricing: USD 5.99; let Apple set other countries).
    - `com.anuragsingh.vitals.trial` — "14-Day Free Trial", price **Free**. (Guideline 3.1.1:
      time-limited trials of non-subscription apps must use a $0 item.)
    Add a review screenshot for each (Settings › Pro tab).
@@ -84,3 +84,16 @@ contains no private-framework code.
 8. Review notes: "Menu-bar utility (LSUIElement). Click the icon in the menu bar to open it.
    Free Up Space asks the user to choose their home folder (security-scoped bookmark); files
    are only moved to the Trash on request."
+
+## Pricing (single source of truth)
+
+| | App Store | Direct (Lemon Squeezy) |
+|---|---|---|
+| Download | Free | Free |
+| Trial | 14 days, starts with the $0 `com.anuragsingh.vitals.trial` item | 14 days, starts on first launch |
+| Vitals Pro | **$5.99 once** — non-consumable `com.anuragsingh.vitals.pro` | **$5.99 once** — license key, 3 Macs |
+| You receive (approx.) | ~$5.09 (Small Business Program, 15%) | ~$5.19 (5% + $0.50 fee) |
+
+- Enrol in the App Store **Small Business Program** (App Store Connect › Agreements) for 15% instead of 30%.
+- In the app: `LicenseConfig.displayPrice` = "$5.99" (fallback text); the App Store shows its localized price.
+- After the trial the app keeps working with the free features; Pro features show a PRO badge and the upgrade button.

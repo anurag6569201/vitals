@@ -14,7 +14,9 @@ enum LicenseConfig {
     /// Optional: your Lemon Squeezy store id, to reject keys from other stores.
     static let lemonSqueezyStoreID: Int? = nil
     static let trialDays = 14
-    static let displayPrice = "$12.99"
+    /// Shown until StoreKit reports the localized App Store price. Keep in sync with Lemon Squeezy
+    /// and the App Store Connect price (see RELEASE.md › Pricing).
+    static let displayPrice = "$5.99"
 }
 
 enum LicenseState: Equatable {

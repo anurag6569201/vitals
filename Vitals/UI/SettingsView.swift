@@ -159,7 +159,7 @@ private struct ProSettings: View {
                     feature("moon.stars", "Full “While you were away” reports")
                     feature("externaldrive.badge.minus", "One-click clearing in Free Up Space")
                     feature("menubar.rectangle", "Menu-bar readings, colors, “only when high”, and extra icon styles")
-                    feature("heart", "Support an independent developer — one payment, yours forever")
+                    feature("heart", "One payment of \(license.priceText) — every feature, no subscription")
                 }
                 .padding(.vertical, 4)
             }
