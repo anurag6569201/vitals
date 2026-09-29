@@ -514,6 +514,22 @@ final class MenuBarControl: ObservableObject {
         refresh()
     }
 
+    /// Set by the status item: is Vitals' own icon actually on screen?
+    var isOwnItemVisible: (() -> Bool)?
+
+    /// Safety net: if hiding other icons ever takes Vitals' own icon with it,
+    /// give everything back immediately so the user never loses Vitals.
+    private func verifyOwnIconStillVisible() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            guard let self, self.isRestrictionActive, let check = self.isOwnItemVisible, !check() else { return }
+            NSLog("Vitals own status item disappeared after restriction; restoring all icons")
+            self.bridge.restoreAll()
+            self.isRestrictionActive = false
+            self.isRevealed = true
+            self.message = "macOS hid Vitals' own icon too, so Vitals showed everything again. Try hiding fewer icons, or quit an app you don't need."
+        }
+    }
+
     func stop() {
         bridge.restoreAll()
         isApplying = false
@@ -655,6 +671,7 @@ final class MenuBarControl: ObservableObject {
                 self.isRestrictionActive = true
                 self.message = nil
                 completion?(true)
+                self.verifyOwnIconStillVisible()
             }
             if self.needsReconcileAfterApply {
                 self.needsReconcileAfterApply = false

@@ -40,7 +40,16 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             .sink { [weak self] _ in self?.render() }
             .store(in: &cancellables)
         HotKey.action = { [weak self] in self?.toggle(nil) }
+        MenuBarControl.shared.isOwnItemVisible = { [weak self] in self?.isVisibleOnScreen ?? true }
         render()
+    }
+
+    /// Whether the icon is really drawn in the menu bar (not hidden by macOS or pushed off-screen).
+    var isVisibleOnScreen: Bool {
+        guard let window = statusItem.button?.window, window.isVisible else { return false }
+        let frame = window.frame
+        guard frame.width > 1 else { return false }
+        return NSScreen.screens.contains { $0.frame.intersects(frame) }
     }
 
     func showPopover() {

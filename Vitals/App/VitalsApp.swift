@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: StatusItemController!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Self.clearLegacyMenuBarChoices()
         NSApp.mainMenu = Self.makeMainMenu()
         license = LicenseManager()
         model = VitalsModel(license: license)
@@ -44,11 +45,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Opening Vitals again (Finder, Spotlight, Launchpad) shows Settings — handy if the
-    /// menu-bar icon is hidden behind the notch.
+    /// Opening Vitals again (Finder, Spotlight, Launchpad) opens the Menu Bar settings — the
+    /// recovery path if the icon is ever hidden (behind the notch, by macOS, or by a hidden-icon choice).
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        windows.showSettings(tab: .general)
+        windows.showSettings(tab: .menuBar)
         return true
+    }
+
+    /// The first prototype saved hidden-icon choices under the same keys. Don't silently re-apply
+    /// them in this version — the person opts in again from Settings › Menu Bar.
+    private static func clearLegacyMenuBarChoices() {
+        let defaults = UserDefaults.standard
+        let marker = "vitals.menuBar.legacyCleared.v2"
+        guard !defaults.bool(forKey: marker) else { return }
+        for key in ["vitals.hiddenMenuApps.v1", "vitals.hiddenSystemItems.v1", "vitals.hubOrder.v1",
+                    "vitals.profiles.v1", "vitals.activeProfile.v1"] {
+            defaults.removeObject(forKey: key)
+        }
+        defaults.set(true, forKey: marker)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
