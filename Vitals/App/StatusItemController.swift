@@ -119,7 +119,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         var parts: [String] = []
         // While other icons are hidden, macOS turns off its overflow (») menu, so a wide item
         // that doesn't fit would vanish. Stay icon-only then; alerts still show as color.
-        let compact = MenuBarControl.shared.isRestrictionActive || MenuBarControl.shared.isApplying
+        let compact = MenuBarControl.shared.isRestrictionActive && MenuBarControl.shared.prefersCompactIcon
         let style = compact ? MenuBarStyle.iconOnly : model.settings.menuBarStyle
         if style != .iconOnly, severity >= .warning, let top = model.issues.first {
             parts.append(top.shortLabel)

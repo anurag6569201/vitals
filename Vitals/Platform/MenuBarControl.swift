@@ -199,6 +199,8 @@ final class MenuBarControl: ObservableObject {
     @Published private(set) var openingItemID: String?
     @Published private(set) var isTrusted = AXIsProcessTrusted()
     @Published private(set) var message: String?
+    /// Set when there wasn't room for Vitals' readings while other icons are hidden.
+    @Published private(set) var prefersCompactIcon = false
 
     private let bridge = MenuBarVisibilityBridge()
     private let storageKey = "vitals.hiddenMenuApps.v1"
@@ -301,6 +303,11 @@ final class MenuBarControl: ObservableObject {
             }
             try FileManager.default.copyItem(at: Bundle.main.bundleURL, to: destination)
             LSRegisterURL(destination as CFURL, true)
+            // Close any other running Vitals so only the Applications copy is left.
+            for other in NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
+            where other.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+                other.terminate()
+            }
             bridge.restoreAll()
             let configuration = NSWorkspace.OpenConfiguration()
             configuration.createsNewApplicationInstance = true
@@ -572,6 +579,7 @@ final class MenuBarControl: ObservableObject {
         hiddenIDs.removeAll()
         hiddenSystemIDs.removeAll()
         hubOrder.removeAll()
+        prefersCompactIcon = false
         UserDefaults.standard.removeObject(forKey: storageKey)
         UserDefaults.standard.removeObject(forKey: systemStorageKey)
         UserDefaults.standard.removeObject(forKey: hubStorageKey)
@@ -588,6 +596,13 @@ final class MenuBarControl: ObservableObject {
     private func verifyOwnIconStillVisible() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
             guard let self, self.isRestrictionActive, let check = self.isOwnItemVisible, !check() else { return }
+            if !self.prefersCompactIcon {
+                // Hidden icons can't overflow, so a wide readout may not fit. Try the plain icon first.
+                NSLog("Vitals own status item not visible; switching to icon only")
+                self.prefersCompactIcon = true
+                self.verifyOwnIconStillVisible()
+                return
+            }
             NSLog("Vitals own status item disappeared after restriction; restoring all icons")
             self.bridge.restoreAll()
             self.isRestrictionActive = false
@@ -700,6 +715,7 @@ final class MenuBarControl: ObservableObject {
             bridge.restoreAll()
             isApplying = false
             isRestrictionActive = false
+            if hiddenIDs.isEmpty && hiddenSystemIDs.isEmpty { prefersCompactIcon = false }
             completion?(true)
             return
         }
