@@ -1,5 +1,5 @@
 // Fill these in once — every page and button uses them.
-export const APP_STORE_URL = 'https://apps.apple.com/app/idREPLACE-WITH-APP-ID';
+export const APP_STORE_URL = 'https://apps.apple.com/app/id6817354726';
 export const SUPPORT_EMAIL = 'support@vitalsformac.com';
 export const SITE_URL = 'https://vitalsformac.com';
 /** Full (direct-download) edition. scripts/release.sh copies each notarized build to public/vitals/Vitals.dmg. */

@@ -81,7 +81,7 @@ contains no private-framework code.
      apps must use a $0 item, and the app must state the length, what locks afterwards and the price
      before the trial starts. Settings › Pro shows this under the trial button.)
    Add a review screenshot for each (Settings › Pro tab).
-2. **App Privacy**: "Data Not Collected".
+2. **App Privacy**: Purchases › Purchase History only (App Functionality, not linked, no tracking). Full copy-paste listing: `AppStore/listing.md`.
 3. **Category**: Utilities. Age rating: 4+.
 4. Screenshots (1280×800 or 2880×1800): popover, menu-bar readings with colors, Free Up Space,
    battery forecast, Settings › Menu Bar.
