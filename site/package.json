@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build && vite build --ssr src/entry-server.jsx --outDir .ssr && node scripts/prerender.mjs",
     "preview": "npm run build && wrangler pages dev",
-    "deploy": "npm run build && wrangler pages deploy",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name vitals --branch main",
     "db:migrate": "wrangler d1 migrations apply vitals-licenses --remote",
     "db:migrate:local": "wrangler d1 migrations apply vitals-licenses --local"
   },

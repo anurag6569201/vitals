@@ -14,22 +14,19 @@ npm run deploy            # build and upload to Cloudflare Pages
 ```
 
 ## Cloudflare setup (vitalsformac.com)
-Done: D1 database `vitals-licenses` created with tables (id in `wrangler.toml`).
+Done: D1 database `vitals-licenses` with tables (id in `wrangler.toml`).
 
-Remaining, in the Cloudflare dashboard (no command line needed):
-1. Workers & Pages › Create › Pages › **Connect to Git** › repo `vitals` · Root directory `site` ·
-   Build command `npm run build` · Output `dist`. Pushes to `main` deploy automatically; the D1
-   binding comes from `wrangler.toml`.
-2. Run `node ../scripts/license-keys.js`. Project › Settings › Variables and Secrets › add **Secret**
-   `LICENSE_SIGNING_KEY` (Production and Preview) = the private key. Paste the public key into
-   `Vitals/Licensing/LicenseManager.swift` › `licensePublicKey`. Retry the latest deployment.
-3. Project › Custom domains › add `vitalsformac.com` (and `www.vitalsformac.com`).
-4. Email › Email Routing › route `support@vitalsformac.com` to your inbox.
-5. App Store Connect › App Information › App Store Server Notifications (V2, Production and Sandbox):
-   `https://vitalsformac.com/api/apple/notifications`. Support URL `https://vitalsformac.com/support`,
-   Privacy Policy URL `https://vitalsformac.com/privacy`.
+Everything else is one command, run on your Mac from the Vitals folder (safe to re-run):
+```bash
+bash site/scripts/cloudflare-setup.sh
+```
+It signs in (browser tab → Allow), creates the Pages project, puts a fresh license signing key into a
+Cloudflare secret (the public half goes into `LicenseManager.swift`), deploys, attaches
+vitalsformac.com + www, and checks the live API. Afterwards: commit the updated `LicenseManager.swift`.
 
-Command-line alternative: `npx wrangler login`, `npx wrangler pages secret put LICENSE_SIGNING_KEY --project-name vitals`, `npm run deploy`.
+Left for the dashboard: Email › Email Routing › forward support@vitalsformac.com to your inbox.
+App Store Connect: Server Notifications V2 URL `https://vitalsformac.com/api/apple/notifications`,
+Support URL `/support`, Privacy URL `/privacy`. Updates later: `npm run deploy`.
 
 ## API (all POST, JSON)
 | Path | Body | Returns |
