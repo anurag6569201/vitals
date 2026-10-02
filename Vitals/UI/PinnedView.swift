@@ -585,11 +585,16 @@ private struct PinBarCell: View {
                     .font(.system(size: 7.5 * s, weight: .bold))
                     .tracking(0.5)
                     .foregroundStyle(palette.secondary)
-                Spacer(minLength: 6 * s)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .layoutPriority(1)
+                Spacer(minLength: 4 * s)
                 Text(shortValue(item, reading))
                     .font(.system(size: 10.5 * s, weight: .semibold, design: .rounded).monospacedDigit())
                     .foregroundStyle(palette.value(reading.alert))
                     .contentTransition(.numericText())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -602,7 +607,7 @@ private struct PinBarCell: View {
             .frame(height: 3 * s)
             .opacity(reading.fraction == nil ? 0 : 1)
         }
-        .frame(width: 96 * s)
+        .frame(width: 108 * s)
         .animation(.snappy, value: reading.value)
         .help(item.title)
     }

@@ -70,7 +70,7 @@ private struct GeneralSettings: View {
                     }
                 }
                 Toggle("Show a report after I've been away", isOn: $model.settings.awayReportsEnabled)
-                Text("Alerts arrive as macOS notifications, with Quit, Snooze and Ignore right on them. Vitals only notifies for real problems — never for routine readings. Turn this off to see alerts inside the Vitals popover instead.")
+                Text("Alerts arrive as macOS notifications, with \(Edition.canQuitApps ? "Quit, Snooze and Ignore" : "Snooze and Ignore") right on them. Vitals only notifies for real problems — never for routine readings. Turn this off to see alerts inside the Vitals popover instead.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
