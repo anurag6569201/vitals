@@ -52,3 +52,4 @@ The macOS 27 icon-hiding bridge in `Vitals/Platform/MenuBarControl.swift` is ada
 see `THIRD_PARTY_NOTICES.md`. It relies on a private framework, so it is labelled beta and can break with macOS updates.
 
 See `RELEASE.md` to ship and `MARKETING.md` for positioning and launch copy.
+# vitals
