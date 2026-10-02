@@ -68,20 +68,91 @@ enum LaunchAtLogin {
     }
 }
 
-enum Notifier {
-    static func requestPermission(completion: ((Bool) -> Void)? = nil) {
+/// Delivers Vitals alerts as macOS notifications, with the issue's actions as notification buttons.
+final class Notifier: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = Notifier()
+
+    /// Action identifiers that aren't an `IssueAction`.
+    static let quitAllAction = "vitals.quitAll"
+    static let upgradeAction = "vitals.upgrade"
+
+    /// (notification id, action identifier, userInfo). Default tap arrives as `UNNotificationDefaultActionIdentifier`.
+    var onResponse: (@MainActor (String, String, [AnyHashable: Any]) -> Void)?
+
+    private var categories: [String: UNNotificationCategory] = [:]
+    private var center: UNUserNotificationCenter { .current() }
+
+    func start() {
+        center.delegate = self
+    }
+
+    static func requestPermission(completion: (@MainActor (Bool) -> Void)? = nil) {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
-            DispatchQueue.main.async { completion?(granted) }
+            DispatchQueue.main.async { MainActor.assumeIsolated { completion?(granted) } }
         }
     }
 
-    static func post(id: String, title: String, body: String) {
+    /// Whether macOS will actually show Vitals notifications.
+    static func checkCanDeliver(_ completion: @escaping @MainActor (Bool) -> Void) {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            let ok = settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
+            DispatchQueue.main.async { MainActor.assumeIsolated { completion(ok) } }
+        }
+    }
+
+    static func openNotificationSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    /// Posts (or replaces) a notification. `actions` are (identifier, title) pairs shown as buttons.
+    func post(id: String, title: String, body: String,
+              actions: [(id: String, title: String)] = [], userInfo: [String: String] = [:]) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = nil
-        let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
+        content.userInfo = userInfo
+        content.threadIdentifier = "vitals.alerts"
+        if !actions.isEmpty {
+            content.categoryIdentifier = register(actions)
+        }
+        center.add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
+    }
+
+    func remove(ids: [String]) {
+        guard !ids.isEmpty else { return }
+        center.removeDeliveredNotifications(withIdentifiers: ids)
+    }
+
+    private func register(_ actions: [(id: String, title: String)]) -> String {
+        let key = "vitals." + actions.map(\.title).joined(separator: "|")
+        if categories[key] == nil {
+            let buttons = actions.map { UNNotificationAction(identifier: $0.id, title: $0.title, options: []) }
+            categories[key] = UNNotificationCategory(identifier: key, actions: buttons, intentIdentifiers: [], options: [])
+            center.setNotificationCategories(Set(categories.values))
+        }
+        return key
+    }
+
+    // MARK: UNUserNotificationCenterDelegate
+
+    /// Show banners even while the Vitals popover is open (the app is active then).
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list])
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        let id = response.notification.request.identifier
+        let action = response.actionIdentifier
+        let info = response.notification.request.content.userInfo
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated { self?.onResponse?(id, action, info) }
+            completionHandler()
+        }
     }
 }
 

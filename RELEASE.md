@@ -1,5 +1,8 @@
 # Shipping Vitals — checklist
 
+> **Plan (30 Sep 2026): App Store only for now.** Skip sections 1–3 and 5 (direct/Lemon Squeezy/website).
+> Follow **Two editions › App Store submission checklist** below. Menu-bar live readings are a Pro feature.
+
 Things marked **you** need your accounts, money or identity; everything else is scripted.
 
 ## 1. Accounts (one-time)
@@ -46,6 +49,9 @@ Things marked **you** need your accounts, money or identity; everything else is 
 - [ ] Menu Bar tab → Allow Accessibility → icons listed → switch one off → it disappears and shows under
       "Menu bar" in the popover → click it there and its menu opens → quit Vitals → every icon is back.
 - [ ] Hover over the clock while icons are hidden → Notification Center still opens.
+- [ ] Alerts arrive as macOS notifications (hover › Options shows Snooze / Always ignore); turn notifications off for Vitals in System Settings → the cards come back inside the popover.
+- [ ] On Screen pin (Pro): pin from the popover's pin button → drag to each edge and corner (snaps; left/right edge = column); right-click menu; Settings › On Screen preview click-to-place; Lock in place lets clicks through; every theme; quit Vitals → pin goes away.
+- [ ] Where your data went: popover section counts up; "See the full breakdown" window; 7/30 days locked on Free; VPN on → VPN row appears and totals don't double.
 - [ ] Energy check: Vitals itself should sit well under 1% CPU in Activity Monitor when the popover is closed.
 
 ## 5. Distribution channels (in order)
@@ -70,8 +76,10 @@ contains no private-framework code.
 ### App Store submission checklist
 1. App Store Connect › Vitals › **In-App Purchases** › create two **Non-Consumable** items:
    - `com.anuragsingh.vitals.pro` — "Vitals Pro", price **$5.99** (App Store Connect › Pricing: USD 5.99; let Apple set other countries).
-   - `com.anuragsingh.vitals.trial` — "14-Day Free Trial", price **Free**. (Guideline 3.1.1:
-     time-limited trials of non-subscription apps must use a $0 item.)
+   - `com.anuragsingh.vitals.trial` — reference name and display name **"14-day Trial"** (Apple requires
+     the "XX-day Trial" naming), price **Free**. (Guideline 3.1.1: time-limited trials of non-subscription
+     apps must use a $0 item, and the app must state the length, what locks afterwards and the price
+     before the trial starts. Settings › Pro shows this under the trial button.)
    Add a review screenshot for each (Settings › Pro tab).
 2. **App Privacy**: "Data Not Collected".
 3. **Category**: Utilities. Age rating: 4+.
@@ -81,9 +89,16 @@ contains no private-framework code.
 6. Xcode: scheme **Vitals App Store**, destination **Any Mac**, Product › Archive ›
    Validate App, then Distribute App › App Store Connect › Upload.
 7. In App Store Connect choose the build, attach both in-app purchases to the version, submit.
-8. Review notes: "Menu-bar utility (LSUIElement). Click the icon in the menu bar to open it.
-   Free Up Space asks the user to choose their home folder (security-scoped bookmark); files
-   are only moved to the Trash on request."
+8. Review notes (paste as is):
+   "Vitals is a menu-bar utility (no Dock icon). After the welcome window, click the pulse icon in the menu bar to open it.
+   Permissions, each asked only after the user acts:
+   • Notifications: requested when the user leaves 'Notify me about real problems' ticked on the welcome screen, or turns it on in Settings. Health alerts are delivered as local notifications (no push, no server). Notifications never advertise Pro (guideline 4.5.4): Pro teasers appear only inside the app's own menu.
+   • Open at login: off by default; the user can turn it on in the welcome screen or Settings (SMAppService).
+   • Files: Free Up Space explains what it does, then shows the standard folder picker so the user can choose their home folder
+     (user-selected read-write + security-scoped bookmark). Files are only moved to the Trash when the user selects them and confirms.
+   No data leaves the Mac. No account, no analytics.
+   In-app purchases: '14-day Trial' ($0 non-consumable) starts a trial of all Pro features; 'Vitals Pro' ($5.99 non-consumable) unlocks them permanently.
+   Both are in Settings › Pro, with Restore Purchase."
 
 ## Pricing (single source of truth)
 

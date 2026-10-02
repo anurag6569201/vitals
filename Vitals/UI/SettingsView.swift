@@ -15,6 +15,9 @@ struct SettingsView: View {
             MenuBarSettings(model: model, isPro: license.isPro, upgrade: { router.tab = .pro })
                 .tabItem { Label("Menu Bar", systemImage: "menubar.rectangle") }
                 .tag(SettingsTab.menuBar)
+            PinSettingsView(model: model, isPro: license.isPro, upgrade: { router.tab = .pro })
+                .tabItem { Label("On Screen", systemImage: "pin") }
+                .tag(SettingsTab.pin)
             PopoverSettings(model: model)
                 .tabItem { Label("Popover", systemImage: "rectangle.stack") }
                 .tag(SettingsTab.popover)
@@ -28,7 +31,7 @@ struct SettingsView: View {
                 .tabItem { Label("About", systemImage: "info.circle") }
                 .tag(SettingsTab.about)
         }
-        .frame(width: 560, height: 560)
+        .frame(width: 600, height: 620)
     }
 }
 
@@ -56,10 +59,18 @@ private struct GeneralSettings: View {
             Section("Notifications") {
                 Toggle("Notify me when something needs attention", isOn: $model.settings.notificationsEnabled)
                     .onChange(of: model.settings.notificationsEnabled) { _, on in
-                        if on { Notifier.requestPermission() }
+                        if on { Notifier.requestPermission { _ in model.refreshNotificationStatus() } }
                     }
+                if model.settings.notificationsEnabled && !model.canDeliverNotifications {
+                    HStack {
+                        Text("Notifications are off for Vitals in System Settings.")
+                            .font(.caption).foregroundStyle(.orange)
+                        Spacer()
+                        Button("Open") { Notifier.openNotificationSettings() }.controlSize(.small)
+                    }
+                }
                 Toggle("Show a report after I've been away", isOn: $model.settings.awayReportsEnabled)
-                Text("Vitals only notifies for real problems — never for routine readings.")
+                Text("Alerts arrive as macOS notifications, with Quit, Snooze and Ignore right on them. Vitals only notifies for real problems — never for routine readings. Turn this off to see alerts inside the Vitals popover instead.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -149,15 +160,16 @@ private struct ProSettings: View {
                 VStack(alignment: .leading, spacing: 6) {
                     if Edition.isAppStore {
                         feature("battery.25percent", "Fast-drain alerts and “Will my battery last?”")
-                        feature("hourglass", "Where your time went — the full 7-day view")
+                        feature("arrow.up.arrow.down", "Where your data went — 7 and 30 days")
                     } else {
                         feature("battery.25percent", "Fast-drain alerts with the app to blame")
                         feature("moon.zzz", "Catch apps that keep your Mac awake")
                         feature("eye.slash", "Hide other apps' menu-bar icons")
-                        feature("hourglass", "Where your time went — the full 7-day view")
+                        feature("arrow.up.arrow.down", "Where your data went — 7 and 30 days, by app")
                     }
                     feature("moon.stars", "Full “While you were away” reports")
                     feature("externaldrive.badge.minus", "One-click clearing in Free Up Space")
+                    feature("pin", "Pin live readings anywhere on your screen")
                     feature("menubar.rectangle", "Menu-bar readings, colors, “only when high”, and extra icon styles")
                     feature("heart", "One payment of \(license.priceText) — every feature, no subscription")
                 }
@@ -170,6 +182,9 @@ private struct ProSettings: View {
                         if license.canStartTrial {
                             Button("Start \(LicenseConfig.trialDays)-Day Free Trial") { Task { await license.startTrial() } }
                                 .disabled(license.isWorking)
+                            Text("Free for \(LicenseConfig.trialDays) days, no payment details needed. When it ends, the Pro features above lock again and the free features keep working. To keep Pro, buy it once for \(license.priceText). You're never charged automatically.")
+                                .font(.caption).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         HStack {
                             Button("Unlock Pro · \(license.priceText)") { Task { await license.purchase() } }

@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import Foundation
+import UserNotifications
 
 /// The app's brain: samples the system, runs the health engine, tracks away periods,
 /// and performs the actions people pick.
@@ -14,21 +15,30 @@ final class VitalsModel: ObservableObject {
     @Published var message: String?
     @Published private(set) var forecast: BatteryForecast?
     @Published private(set) var leavingCheck: LeavingCheck?
+    /// False when macOS has notifications for Vitals turned off.
+    @Published private(set) var canDeliverNotifications = true
+    /// Bumped just before the popover opens, so its entrance animation replays.
+    @Published private(set) var popoverEpoch = 0
     @Published var settings: AppSettings {
         didSet {
             guard settings != oldValue else { return }
             settings.save()
             if settings.hotkey != oldValue.hotkey { hotKey.register(settings.hotkey) }
+            if settings.notificationsEnabled != oldValue.notificationsEnabled { refreshNotificationStatus() }
+            if settings.pin.enabled != oldValue.pin.enabled { schedule() }
         }
     }
 
     let license: LicenseManager
     let updates = UpdateChecker()
     let space = SpaceModel()
-    let appTime = AppTimeTracker()
+    let network = NetworkUsageTracker()
     let keepAwake = KeepAwake()
     let hotKey = HotKey()
     var openWindow: ((AppWindow) -> Void)?
+    var openPopover: (() -> Void)?
+    /// Ids of issues we've posted a notification for and that are still active.
+    private var notifiedIDs: Set<String> = []
     private var wasOnAC: Bool?
     let sampler = SystemSampler()
     private let engine = HealthEngine()
@@ -44,6 +54,7 @@ final class VitalsModel: ObservableObject {
             if isPopoverOpen {
                 tick()
                 updates.checkIfNeeded()
+                refreshNotificationStatus()
             }
             schedule()
         }
@@ -66,7 +77,18 @@ final class VitalsModel: ObservableObject {
         return report
     }
 
+    /// Alerts go to macOS notifications. They fall back to cards in the popover only when
+    /// notifications are switched off, in Vitals or in System Settings.
+    var alertsInPopover: Bool { !(settings.notificationsEnabled && canDeliverNotifications) }
+
     func start() {
+        Notifier.shared.start()
+        Notifier.shared.onResponse = { [weak self] id, action, info in
+            self?.handleNotification(id: id, action: action, info: info)
+        }
+        if settings.notificationsEnabled && settings.hasCompletedOnboarding {
+            Notifier.requestPermission { [weak self] _ in self?.refreshNotificationStatus() }
+        }
         presence.onChange = { [weak self] wasAway, isAway in
             self?.presenceChanged(wasAway: wasAway, isAway: isAway)
         }
@@ -84,7 +106,9 @@ final class VitalsModel: ObservableObject {
 
     private func schedule() {
         timer?.invalidate()
-        let interval: TimeInterval = isPopoverOpen ? 2 : (presence.isAway ? 10 : 5)
+        // The on-screen pin shows live numbers, so it refreshes faster while you're at the Mac.
+        let pinVisible = settings.pin.enabled && license.isPro
+        let interval: TimeInterval = isPopoverOpen ? 2 : (presence.isAway ? 10 : (pinVisible ? 2.5 : 5))
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
@@ -102,9 +126,10 @@ final class VitalsModel: ObservableObject {
         updateBatteryPlanning(snap)
         space.backgroundRefreshIfDue(onAC: snap.battery?.isOnAC ?? true)
 
+        network.sample(downRate: snap.downloadRate, upRate: snap.uploadRate, now: snap.date)
         snapshot = snap
         publishIssues()
-        notify(about: newlyVisible)
+        notify(newlyVisible: newlyVisible)
     }
 
     private func publishIssues() {
@@ -123,19 +148,26 @@ final class VitalsModel: ObservableObject {
         let onAC = snap.battery?.isOnAC
         defer { wasOnAC = onAC }
         if onAC == true {
-            leavingCheck = nil
+            if leavingCheck != nil { dismissLeavingCheck() }
             return
         }
         if let check = leavingCheck, snap.date.timeIntervalSince(check.date) > 20 * 60 {
-            leavingCheck = nil
+            dismissLeavingCheck()
         }
         guard wasOnAC == true, onAC == false,
               let check = LeavingCheck.make(from: snap, ignored: settings.detection.ignoredApps) else { return }
         leavingCheck = check
-        if settings.notificationsEnabled && license.isPro {
-            Notifier.post(id: "leaving", title: check.headline, body: check.detail)
-        }
+        // Pro only: a notification that just advertises Pro would break App Review guideline 4.5.4.
+        // Free users see the teaser card in the popover instead.
+        guard settings.notificationsEnabled, license.isPro else { return }
+        let quitTitle = Edition.canQuitApps
+            ? "Quit \(check.all.count == 1 ? Format.shortName(check.all[0].name) : "all \(check.all.count)")"
+            : "Show in Activity Monitor"
+        Notifier.shared.post(id: "leaving", title: check.headline, body: check.detail,
+                             actions: [(Notifier.quitAllAction, quitTitle)])
     }
+
+    func popoverWillOpen() { popoverEpoch += 1 }
 
     func startKeepAwake(_ duration: TimeInterval?) {
         keepAwake.start(for: duration, allowDisplaySleep: settings.keepAwakeAllowsDisplaySleep)
@@ -143,6 +175,7 @@ final class VitalsModel: ObservableObject {
 
     func dismissLeavingCheck() {
         leavingCheck = nil
+        Notifier.shared.remove(ids: ["leaving"])
     }
 
     func quitAll(_ identities: [AppIdentity]) {
@@ -162,10 +195,49 @@ final class VitalsModel: ObservableObject {
 
     // MARK: Notifications
 
-    private func notify(about newIssues: [Issue]) {
-        guard settings.notificationsEnabled, !isPopoverOpen else { return }
-        for issue in newIssues where issue.severity >= .warning {
-            Notifier.post(id: issue.id, title: issue.headline, body: issue.detail)
+    private func notify(newlyVisible: [Issue]) {
+        // Clear notifications for problems that have gone away.
+        let activeIDs = Set(issues.map(\.id))
+        let gone = notifiedIDs.subtracting(activeIDs)
+        Notifier.shared.remove(ids: Array(gone))
+        notifiedIDs.subtract(gone)
+
+        guard settings.notificationsEnabled else { return }
+        for issue in newlyVisible where !notifiedIDs.contains(issue.id) {
+            let actions = issue.actions
+                .filter { $0 != .showAwayReport && (Edition.canQuitApps || ($0 != .quitApp && $0 != .forceQuitApp)) }
+                .prefix(4)
+                .map { (id: $0.rawValue, title: issue.title(for: $0)) }
+            Notifier.shared.post(id: issue.id, title: issue.headline, body: issue.detail,
+                                 actions: Array(actions), userInfo: ["issue": issue.id])
+            notifiedIDs.insert(issue.id)
+        }
+    }
+
+    func refreshNotificationStatus() {
+        Notifier.checkCanDeliver { [weak self] ok in
+            guard let self, self.canDeliverNotifications != ok else { return }
+            self.canDeliverNotifications = ok
+        }
+    }
+
+    private func handleNotification(id: String, action: String, info: [AnyHashable: Any]) {
+        switch action {
+        case Notifier.upgradeAction:
+            openWindow?(.settings(.pro))
+        case Notifier.quitAllAction:
+            if let check = leavingCheck { quitAll(check.all); dismissLeavingCheck() }
+        case UNNotificationDefaultActionIdentifier:
+            openPopover?()
+        default:
+            guard let issueAction = IssueAction(rawValue: action),
+                  let issueID = info["issue"] as? String,
+                  let issue = issues.first(where: { $0.id == issueID }) else {
+                openPopover?()
+                return
+            }
+            perform(issueAction, on: issue)
+            if let message { Notifier.shared.post(id: "feedback", title: "Vitals", body: message) }
         }
     }
 
@@ -181,7 +253,7 @@ final class VitalsModel: ObservableObject {
                 AwayReportStore.save(awayReports)
                 if report.verdict == .unusual && settings.notificationsEnabled {
                     let body = license.isPro ? report.explanation : "Open Vitals to see what happened."
-                    Notifier.post(id: "away-\(report.id)", title: report.headline, body: body)
+                    Notifier.shared.post(id: "away-\(report.id)", title: report.headline, body: body)
                 }
             }
         }
@@ -246,6 +318,18 @@ final class VitalsModel: ObservableObject {
             SystemActions.openActivityMonitor()
             show("macOS didn't let Vitals quit \(identity.name).")
         }
+    }
+
+    /// Adds or removes a reading from the on-screen pin, keeping the canonical order.
+    func togglePinItem(_ item: PinItem) {
+        var items = settings.pin.items
+        if let index = items.firstIndex(of: item) {
+            items.remove(at: index)
+        } else {
+            items.append(item)
+            items.sort { (PinItem.allCases.firstIndex(of: $0) ?? 0) < (PinItem.allCases.firstIndex(of: $1) ?? 0) }
+        }
+        settings.pin.items = items
     }
 
     func unignore(_ key: String) {

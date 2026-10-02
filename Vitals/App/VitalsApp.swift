@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var model: VitalsModel!
     private var windows: WindowManager!
     private var statusItem: StatusItemController!
+    private var pinned: PinnedPanelController!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Self.clearLegacyMenuBarChoices()
@@ -31,6 +32,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         windows = WindowManager(model: model)
         statusItem = StatusItemController(model: model, windows: windows)
         model.openWindow = { [weak self] window in self?.windows.show(window) }
+        model.openPopover = { [weak self] in self?.statusItem.showPopover() }
+        pinned = PinnedPanelController(model: model,
+                                       openPopover: { [weak self] in self?.statusItem.showPopover() },
+                                       openSettings: { [weak self] in self?.windows.showSettings(tab: .pin) })
         model.start()
         let menuBar = MenuBarControl.shared
         if !menuBar.hiddenIDs.isEmpty || !menuBar.hiddenSystemIDs.isEmpty || !menuBar.hubOrder.isEmpty {
@@ -56,6 +61,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// them in this version — the person opts in again from Settings › Menu Bar.
     private static func clearLegacyMenuBarChoices() {
         let defaults = UserDefaults.standard
+        // "Where your time went" was removed: drop its stored history.
+        defaults.removeObject(forKey: "vitals.appTime.v1")
+        defaults.removeObject(forKey: "vitals.appTime.names.v1")
         let marker = "vitals.menuBar.legacyCleared.v2"
         guard !defaults.bool(forKey: marker) else { return }
         for key in ["vitals.hiddenMenuApps.v1", "vitals.hiddenSystemItems.v1", "vitals.hubOrder.v1",
@@ -110,6 +118,7 @@ final class WindowManager {
     private var settingsWindow: NSWindow?
     private var onboardingWindow: NSWindow?
     private var spaceWindow: NSWindow?
+    private var networkWindow: NSWindow?
     private let settingsRouter = SettingsRouter()
 
     init(model: VitalsModel) {
@@ -134,7 +143,21 @@ final class WindowManager {
         switch window {
         case .settings(let tab): showSettings(tab: tab)
         case .space: showSpace()
+        case .network: showNetwork()
         }
+    }
+
+    func showNetwork() {
+        if networkWindow == nil {
+            let view = NetworkWindowView(tracker: model.network, isPro: model.license.isPro,
+                                         upgrade: { [weak self] in self?.showSettings(tab: .pro) })
+            let window = makeWindow(NSHostingController(rootView: view), title: "Where Your Data Went")
+            window.styleMask.insert(.resizable)
+            window.setContentSize(NSSize(width: 760, height: 680))
+            window.center()
+            networkWindow = window
+        }
+        present(networkWindow)
     }
 
     func showSpace() {
@@ -187,10 +210,11 @@ final class WindowManager {
 enum AppWindow {
     case settings(SettingsTab)
     case space
+    case network
 }
 
 enum SettingsTab: String, Hashable {
-    case general, menuBar, popover, alerts, pro, about
+    case general, menuBar, pin, popover, alerts, pro, about
 }
 
 @MainActor

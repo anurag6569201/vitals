@@ -59,5 +59,7 @@ struct Card<Content: View>: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .strokeBorder((accent ?? Color.primary).opacity(accent == nil ? 0.08 : 0.45), lineWidth: 1))
+            .hoverLift(1.006, shadow: false)
+            .animation(Motion.spring, value: accent)
     }
 }

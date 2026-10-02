@@ -83,8 +83,7 @@ final class LicenseManager: ObservableObject {
         // Testing the App Store edition from Xcode: Pro is unlocked. Never in archived builds
         // (the AppStore configuration has no DEBUG flag).
         state = .pro
-        return
-        #endif
+        #else
         let owned = usesAppStore ? defaults.bool(forKey: Keys.storePro) : (licenseKey != nil)
         if owned {
             state = .pro
@@ -99,6 +98,7 @@ final class LicenseManager: ObservableObject {
         let used = Int(Date().timeIntervalSince(first) / 86_400)
         let left = LicenseConfig.trialDays - used
         state = left > 0 ? .trial(daysLeft: left) : .free
+        #endif
     }
 
     var priceText: String { storeProduct?.displayPrice ?? LicenseConfig.displayPrice }

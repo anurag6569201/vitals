@@ -26,7 +26,7 @@ MacBook owners who aren't hardware nerds — students, creators, developers, off
 - Free forever: health light, runaway-app, heat, memory, disk alerts, live dashboard, and a full Free Up Space scan.
 - **Vitals Pro — $5.99 once, complete access** (App Store and direct, same price): live menu-bar readings with
   icons and colors, "Will my battery last?" planner, fast-drain alerts, one-click clearing in Free Up Space,
-  7-day "Where your time went", full "While you were away" reports; the direct version adds icon hiding,
+  7- and 30-day "Where your data went", the on-screen pin, full "While you were away" reports; the direct version adds icon hiding,
   per-app battery culprits, apps keeping your Mac awake and one-click Quit. 14-day free trial, no account.
 - Why $5.99: an impulse price for a small utility, below every competitor that charges, and easy to say yes to
   after the trial. Revisit after the first 500 sales.

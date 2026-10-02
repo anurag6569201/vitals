@@ -9,58 +9,51 @@ struct PopoverView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HeaderView(model: model, keepAwake: model.keepAwake)
+            HeaderView(model: model, keepAwake: model.keepAwake, isPro: license.isPro, openSettings: openSettings)
+                .vitalsAppear(0)
 
             if let message = model.message {
                 Label(message, systemImage: "info.circle")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                    .transition(.opacity)
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
 
             if show(.menuBarItems) {
                 MenuBarShortcuts(control: MenuBarControl.shared)
+                    .vitalsAppear(1)
             }
 
-            if let check = model.leavingCheck {
-                LeavingCheckCard(check: check, isPro: license.isPro,
-                                 quitAll: { model.quitAll(check.all); model.dismissLeavingCheck() },
-                                 dismiss: { withAnimation { model.dismissLeavingCheck() } },
-                                 upgrade: { openSettings(.pro) })
-            }
-
-            ForEach(model.issues) { issue in
-                IssueCard(issue: issue, close: {
-                    withAnimation(.snappy) { model.hide(issue) }
-                }) { action in
-                    withAnimation(.snappy) { model.perform(action, on: issue) }
-                }
-            }
-
-            if !model.lockedIssues.isEmpty {
-                LockedIssuesCard(issues: model.lockedIssues) { openSettings(.pro) }
-            }
+            alertCards
+                .vitalsAppear(2)
 
             if let report = model.latestReport {
                 AwayReportCard(report: report, isPro: license.isPro,
                                dismiss: { withAnimation { model.markReportSeen(report) } },
                                upgrade: { openSettings(.pro) })
+                    .vitalsAppear(3)
+                    .transition(.asymmetric(insertion: .opacity, removal: .scale(scale: 0.95).combined(with: .opacity)))
             }
 
             if let forecast = model.forecast, show(.batteryPlanner) {
                 BatteryPlannerCard(forecast: forecast, isPro: license.isPro,
                                    quit: { model.quitAll($0) }, upgrade: { openSettings(.pro) })
+                    .vitalsAppear(4)
             }
 
             if let snapshot = model.snapshot {
                 if show(.vitals) { VitalsGrid(snapshot: snapshot) }
                 if show(.freeUpSpace) {
                     ToolsRow(space: model.space, openSpace: { model.openWindow?(.space) })
+                        .vitalsAppear(11)
                 }
-                if show(.timeSpent) {
-                    TimeSpentSection(tracker: model.appTime, isPro: license.isPro, upgrade: { openSettings(.pro) })
+                if show(.network) {
+                    NetworkSection(tracker: model.network, isPro: license.isPro,
+                                   upgrade: { openSettings(.pro) },
+                                   openDetails: { model.openWindow?(.network) })
+                        .vitalsAppear(12)
                 }
-                if show(.topApps) { TopAppsSection(snapshot: snapshot, quit: { model.quit($0) }) }
+                if show(.topApps) { TopAppsSection(snapshot: snapshot, quit: { model.quit($0) }).vitalsAppear(12) }
             }
 
             if let release = model.updates.available {
@@ -74,10 +67,50 @@ struct PopoverView: View {
             }
 
             FooterView(license: license, openSettings: openSettings)
+                .vitalsAppear(12)
         }
         .padding(14)
         .frame(width: 368)
-        .animation(.snappy, value: model.issues)
+        .environment(\.appearEpoch, model.popoverEpoch)
+        .animation(Motion.spring, value: model.issues)
+        .animation(Motion.spring, value: model.message)
+        .animation(Motion.spring, value: model.latestReport?.id)
+    }
+
+    /// Alerts normally arrive as macOS notifications; their cards show here only when notifications
+    /// are off. Pro teasers always stay in the popover (never as notifications — guideline 4.5.4).
+    @ViewBuilder private var alertCards: some View {
+        if model.settings.notificationsEnabled && !model.canDeliverNotifications {
+            HStack(spacing: 6) {
+                Image(systemName: "bell.slash").foregroundStyle(.orange)
+                Text("Notifications are off for Vitals, so alerts show here.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("Turn on") { Notifier.openNotificationSettings() }
+                    .buttonStyle(.link).font(.caption)
+            }
+        }
+
+        if let check = model.leavingCheck, model.alertsInPopover || !license.isPro {
+            LeavingCheckCard(check: check, isPro: license.isPro,
+                             quitAll: { model.quitAll(check.all); model.dismissLeavingCheck() },
+                             dismiss: { withAnimation { model.dismissLeavingCheck() } },
+                             upgrade: { openSettings(.pro) })
+        }
+
+        if model.alertsInPopover {
+            ForEach(model.issues) { issue in
+                IssueCard(issue: issue, close: {
+                    withAnimation(.snappy) { model.hide(issue) }
+                }) { action in
+                    withAnimation(.snappy) { model.perform(action, on: issue) }
+                }
+            }
+        }
+
+        if !model.lockedIssues.isEmpty {
+            LockedIssuesCard(issues: model.lockedIssues) { openSettings(.pro) }
+        }
     }
 
     private func show(_ section: PopoverSection) -> Bool {
@@ -90,20 +123,31 @@ struct PopoverView: View {
 private struct HeaderView: View {
     @ObservedObject var model: VitalsModel
     @ObservedObject var keepAwake: KeepAwake
+    let isPro: Bool
+    let openSettings: (SettingsTab) -> Void
 
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
+                if model.severity >= .warning {
+                    BreathingRing(color: model.severity.color).frame(width: 40, height: 40)
+                }
                 Circle().fill(model.severity.color.gradient).frame(width: 40, height: 40)
+                    .shadow(color: model.severity.color.opacity(0.35), radius: 6, y: 2)
                 Image(systemName: model.severity == .calm ? "checkmark" : "waveform.path.ecg")
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(.white)
+                    .contentTransition(.symbolEffect(.replace))
             }
+            .animation(Motion.spring, value: model.severity)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline)
+                    .contentTransition(.interpolate)
                 Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                    .contentTransition(.interpolate)
             }
             Spacer()
+            pinButton
             Menu {
                 if keepAwake.isOn {
                     Button("Stop keeping awake") { keepAwake.stop() }
@@ -126,8 +170,43 @@ private struct HeaderView: View {
         }
     }
 
+    @ViewBuilder private var pinButton: some View {
+        let pin = model.settings.pin
+        let on = pin.enabled && isPro
+        if isPro {
+            Menu {
+                Button(on ? "Unpin from Screen" : "Pin to Screen") { model.settings.pin.enabled.toggle() }
+                if on {
+                    Toggle("Lock in Place", isOn: $model.settings.pin.locked)
+                }
+                Divider()
+                Button("Customize…") { openSettings(.pin) }
+            } label: {
+                Image(systemName: on ? (pin.locked ? "pin.circle.fill" : "pin.fill") : "pin")
+                    .foregroundStyle(on ? Color.accentColor : Color.secondary)
+            } primaryAction: {
+                model.settings.pin.enabled.toggle()
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help(on ? "Unpin from your screen (hold for options)" : "Pin live readings to your screen")
+        } else {
+            Button { openSettings(.pin) } label: {
+                Image(systemName: "pin").foregroundStyle(.secondary)
+            }
+            .buttonStyle(.borderless)
+            .help("Pin live readings to your screen (Pro)")
+        }
+    }
+
     private var title: String {
         let count = model.issues.filter { $0.severity >= .warning }.count
+        if !model.alertsInPopover && !model.issues.isEmpty {
+            // The alert itself lives in Notification Center; the header just points there.
+            let n = model.issues.count
+            return n == 1 ? "1 alert in Notification Center" : "\(n) alerts in Notification Center"
+        }
         switch model.severity {
         case .calm: return "Your Mac is healthy"
         case .notice: return model.issues.count == 1 ? "One small heads-up" : "\(model.issues.count) small heads-ups"
@@ -215,13 +294,7 @@ struct IssueCard: View {
         }
     }
 
-    private func title(for action: IssueAction) -> String {
-        switch action {
-        case .quitApp: "Quit \(Format.shortName(issue.subject?.name ?? "App"))"
-        case .ignoreApp: "Always ignore \(Format.shortName(issue.subject?.name ?? "this app"))"
-        default: action.title
-        }
-    }
+    private func title(for action: IssueAction) -> String { issue.title(for: action) }
 }
 
 // MARK: - Locked (Pro) issues
@@ -364,11 +437,11 @@ private struct Tile: View {
                 .foregroundStyle(warn ? .orange : .primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+                .contentTransition(.numericText())
+                .animation(Motion.spring, value: value)
             if let fraction {
-                ProgressView(value: min(max(fraction, 0), 1))
-                    .progressViewStyle(.linear)
-                    .tint(warn ? .orange : .accentColor)
-                    .controlSize(.mini)
+                AnimatedBar(value: fraction, tint: warn ? .orange : .accentColor, height: 4)
+                    .padding(.vertical, 2)
             }
             Text(caption)
                 .font(.system(size: 10))
@@ -379,6 +452,8 @@ private struct Tile: View {
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(nsColor: .controlBackgroundColor).opacity(0.6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .hoverLift(1.03)
+        .vitalsAppear(5 + (["CPU": 0, "Memory": 1, "Battery": 2, "Power": 2, "Disk": 3, "Network": 4, "Uptime": 5][title] ?? 0))
     }
 }
 

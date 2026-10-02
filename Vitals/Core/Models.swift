@@ -238,4 +238,12 @@ struct Issue: Identifiable, Hashable {
     var since: Date
 
     var primaryAction: IssueAction? { actions.first }
+
+    func title(for action: IssueAction) -> String {
+        switch action {
+        case .quitApp: "Quit \(Format.shortName(subject?.name ?? "App"))"
+        case .ignoreApp: "Always ignore \(Format.shortName(subject?.name ?? "this app"))"
+        default: action.title
+        }
+    }
 }

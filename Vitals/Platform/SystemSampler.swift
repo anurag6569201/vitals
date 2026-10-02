@@ -10,7 +10,7 @@ import IOKit.pwr_mgt
 final class SystemSampler {
     private let processes = ProcessSampler()
     private var previousCPU: (active: UInt64, idle: UInt64)?
-    private var previousNetwork: (received: UInt64, sent: UInt64, date: Date)?
+    private var previousInterfaces: (values: [String: (down: UInt64, up: UInt64)], date: Date)?
     private var cachedDisk: (free: UInt64?, total: UInt64?, date: Date)?
     private(set) var assertionsAvailable = true
     private(set) var batteryPowerAvailable = false
@@ -202,29 +202,18 @@ final class SystemSampler {
     // MARK: Network
 
     private func networkRates(now: Date) -> (down: Double, up: Double) {
-        var addresses: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&addresses) == 0, let first = addresses else { return (0, 0) }
-        defer { freeifaddrs(addresses) }
-        var received: UInt64 = 0
-        var sent: UInt64 = 0
-        var cursor: UnsafeMutablePointer<ifaddrs>? = first
-        while let address = cursor {
-            let flags = address.pointee.ifa_flags
-            if let socket = address.pointee.ifa_addr, socket.pointee.sa_family == UInt8(AF_LINK),
-               flags & UInt32(IFF_UP) != 0, flags & UInt32(IFF_LOOPBACK) == 0,
-               let raw = address.pointee.ifa_data {
-                let data = raw.assumingMemoryBound(to: if_data.self).pointee
-                received += UInt64(data.ifi_ibytes)
-                sent += UInt64(data.ifi_obytes)
-            }
-            cursor = address.pointee.ifa_next
-        }
-        defer { previousNetwork = (received, sent, now) }
-        guard let previous = previousNetwork else { return (0, 0) }
+        // VPN tunnels are skipped: their traffic is already counted on Wi‑Fi or wired.
+        let counters = InterfaceCounters.read().filter { !InterfaceCounters.isTunnel($0.key) }
+        defer { previousInterfaces = (counters, now) }
+        guard let previous = previousInterfaces else { return (0, 0) }
         let seconds = max(now.timeIntervalSince(previous.date), 0.1)
-        let down = received >= previous.received ? Double(received - previous.received) / seconds : 0
-        let up = sent >= previous.sent ? Double(sent - previous.sent) / seconds : 0
-        return (down, up)
+        var down: UInt64 = 0, up: UInt64 = 0
+        for (name, value) in counters {
+            guard let old = previous.values[name] else { continue }
+            down &+= InterfaceCounters.delta(value.down, since: old.down)
+            up &+= InterfaceCounters.delta(value.up, since: old.up)
+        }
+        return (Double(down) / seconds, Double(up) / seconds)
     }
 
     // MARK: Power assertions

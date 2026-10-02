@@ -126,7 +126,8 @@ struct ToolsRow: View {
             .background(Color(nsColor: .controlBackgroundColor).opacity(0.6), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableStyle())
+        .hoverLift(1.01)
     }
 }
 

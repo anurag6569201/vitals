@@ -4,7 +4,7 @@ import SwiftUI
 struct OnboardingView: View {
     @ObservedObject var model: VitalsModel
     let done: () -> Void
-    @State private var launchAtLogin = true
+    @State private var launchAtLogin = false  // opt-in only (App Review 2.4.5)
     @State private var notifications = true
 
     var body: some View {
@@ -29,18 +29,31 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 14) {
                 row("waveform.path.ecg", "Quiet until it matters",
                     "One small icon in your menu bar. It only changes color when something needs you.")
-                row("text.bubble", "Tells you why, in plain English",
-                    "“Chrome has used 180% CPU for 12 minutes” — not a wall of graphs.")
-                row("hand.tap", "Fixes in one click",
-                    "Quit the app to blame, snooze, or ignore it for good.")
-                row("moon.stars", "Knows what happened while you were away",
-                    "Find out why your battery dropped overnight.")
+                if Edition.isAppStore {
+                    row("text.bubble", "Tells you why, in plain English",
+                        "“Your Mac is running hot” or “Memory is under pressure” — not a wall of graphs.")
+                    row("externaldrive.badge.minus", "Shows what to clear",
+                        "When your disk fills up, see exactly what's taking the space.")
+                    row("moon.stars", "Knows what happened while you were away",
+                        "See how much battery your Mac used while you were gone.")
+                } else {
+                    row("text.bubble", "Tells you why, in plain English",
+                        "“Chrome has used 180% CPU for 12 minutes” — not a wall of graphs.")
+                    row("hand.tap", "Fixes in one click",
+                        "Quit the app to blame, snooze, or ignore it for good.")
+                    row("moon.stars", "Knows what happened while you were away",
+                        "Find out why your battery dropped overnight.")
+                }
             }
             .padding(.horizontal, 8)
 
             VStack(alignment: .leading, spacing: 8) {
                 Toggle("Open Vitals when I log in", isOn: $launchAtLogin)
                 Toggle("Notify me about real problems", isOn: $notifications)
+                if notifications {
+                    Text("macOS will ask you to allow notifications next.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             .toggleStyle(.checkbox)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -49,7 +62,7 @@ struct OnboardingView: View {
             Button {
                 LaunchAtLogin.set(launchAtLogin)
                 model.settings.notificationsEnabled = notifications
-                if notifications { Notifier.requestPermission() }
+                if notifications { Notifier.requestPermission { _ in model.refreshNotificationStatus() } }
                 done()
             } label: {
                 Text("Start Watching").frame(maxWidth: .infinity)

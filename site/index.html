@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Vitals is the check-engine light for your Mac. It stays quiet in your menu bar and tells you, in plain English, when an app is draining your battery, overheating your Mac or keeping it awake — then fixes it in one click.">
+<meta name="description" content="Vitals is the check-engine light for your Mac. It stays quiet in your menu bar and tells you, in plain English, when your Mac is running hot, short on memory or disk, or draining its battery faster than normal. It also shows exactly what to clear when your disk fills up.">
 <title>Vitals for Mac</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -182,219 +182,222 @@ footer { padding-block: 40px 56px; border-top: 1px solid var(--line); color: var
 </style>
 </head>
 <body>
-
 <div class="wrap">
-  <nav>
-    <a class="brand" href="#top" aria-label="Vitals home">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12h4l2.5-6 4 12 3-9 2 3H22" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Vitals
-    </a>
-    <div class="navlinks">
-      <a href="#catches">What it catches</a>
-      <a href="#away">While you were away</a>
-      <a href="#pricing">Pricing</a>
-      <a href="#faq">FAQ</a>
-    </div>
-  </nav>
+<nav>
+  <a class="brand" href="#top" aria-label="Vitals home">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12h4l2.5-6 4 12 3-9 2 3H22" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Vitals
+  </a>
+  <div class="navlinks">
+    <a href="#catches">What it catches</a>
+    <a href="#space">Free Up Space</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+  </div>
+</nav>
 
-  <header class="hero" id="top">
-    <div>
-      <div class="eyebrow"><span class="lamp"></span>The check-engine light for your Mac</div>
-      <h1>Your Mac, without the guesswork.</h1>
-      <p class="lede">Vitals sits quietly in your menu bar. When an app is cooking your CPU, draining your battery or keeping your Mac awake all night, it tells you in plain English and fixes it in one click.</p>
-      <div class="ctas">
-        <a class="btn primary" href="#pricing">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Download free
-        </a>
-        <a class="btn" href="#catches">See what it catches</a>
-      </div>
-      <p class="fine">macOS 14 or later · One-time Pro upgrade · No account · Nothing leaves your Mac</p>
+<header class="hero" id="top">
+  <div>
+    <div class="eyebrow"><span class="lamp"></span>The check-engine light for your Mac</div>
+    <h1>Your Mac, without the guesswork.</h1>
+    <p class="lede">Vitals sits quietly in your menu bar. When your Mac is running hot, short on memory or disk, or draining its battery faster than normal, it tells you in plain English what's wrong and what to do.</p>
+    <div class="ctas">
+      <a class="btn primary" href="https://apps.apple.com/app/idREPLACE-WITH-APP-ID">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Get it on the Mac App Store
+      </a>
+      <a class="btn" href="#catches">See what it catches</a>
     </div>
+    <p class="fine">Free download · macOS 14 or later · Pro $5.99 once · No account · Nothing leaves your Mac</p>
+  </div>
 
-    <div class="demo">
-      <div class="toggle" role="group" aria-label="Demo state">
-        <button type="button" id="st-calm" aria-pressed="false">All good</button>
-        <button type="button" id="st-alert" aria-pressed="true">Something's wrong</button>
-      </div>
-      <div class="menubar" aria-hidden="true">
-        <span class="dim"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 18.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm-4.2-4.3a6 6 0 0 1 8.4 0l1.4-1.4a8 8 0 0 0-11.2 0l1.4 1.4Zm-2.8-2.8a10 10 0 0 1 14 0l1.4-1.4a12 12 0 0 0-16.8 0L5 11.4Z"/></svg></span>
-        <span class="dim"><svg width="22" height="14" viewBox="0 0 26 14" fill="none"><rect x="1" y="1" width="21" height="12" rx="3" stroke="currentColor" stroke-width="1.5"/><rect x="3" y="3" width="14" height="8" rx="1.5" fill="currentColor"/><path d="M24 5v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-        <span class="pulse" id="mb-pulse">
-          <svg width="18" height="14" viewBox="0 0 24 18" fill="none" id="mb-icon"><path d="M1 9h4l2.5-6 4 12 3-9 2 3H23" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span class="dot" id="mb-dot"></span>
-          <span class="label" id="mb-label">Chrome 182%</span>
-        </span>
-        <span>Tue 29 Sep 10:42</span>
-      </div>
-      <div class="popover">
-        <div class="head">
-          <div class="badge" id="pv-badge" style="background: var(--lamp)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12h4l2.5-6 4 12 3-9 2 3H22" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <div>
-            <h3 id="pv-title">One thing needs your attention</h3>
-            <p id="pv-sub">Watching quietly · 3h 40m left</p>
-          </div>
+  <div class="demo">
+    <div class="toggle" role="group" aria-label="Demo state">
+      <button type="button" id="st-calm" aria-pressed="false">All good</button>
+      <button type="button" id="st-alert" aria-pressed="true">Something's wrong</button>
+    </div>
+    <div class="menubar" aria-hidden="true">
+      <span class="dim"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 18.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm-4.2-4.3a6 6 0 0 1 8.4 0l1.4-1.4a8 8 0 0 0-11.2 0l1.4 1.4Zm-2.8-2.8a10 10 0 0 1 14 0l1.4-1.4a12 12 0 0 0-16.8 0L5 11.4Z"/></svg></span>
+      <span class="dim"><svg width="22" height="14" viewBox="0 0 26 14" fill="none"><rect x="1" y="1" width="21" height="12" rx="3" stroke="currentColor" stroke-width="1.5"/><rect x="3" y="3" width="14" height="8" rx="1.5" fill="currentColor"/><path d="M24 5v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+      <span class="pulse" id="mb-pulse">
+        <svg width="18" height="14" viewBox="0 0 24 18" fill="none" id="mb-icon"><path d="M1 9h4l2.5-6 4 12 3-9 2 3H23" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="dot" id="mb-dot"></span>
+        <span class="label" id="mb-label">Hot</span>
+      </span>
+      <span>Wed 30 Sep 10:42</span>
+    </div>
+    <div class="popover">
+      <div class="head">
+        <div class="badge" id="pv-badge" style="background: var(--lamp)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12h4l2.5-6 4 12 3-9 2 3H22" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
-        <div class="issue" id="pv-issue">
-          <div class="appicon" style="background: linear-gradient(135deg,#4285f4,#34a853)">G</div>
-          <div>
-            <h4>Google Chrome is working hard</h4>
-            <p>It has used about 182% CPU for 12m across 23 processes, like keeping 2 processor cores busy nonstop. That drains battery and heats your Mac.</p>
-            <div class="actions"><span class="chip go">Quit Chrome</span><span class="chip">Snooze</span><span class="chip">···</span></div>
-          </div>
-        </div>
-        <div class="calm-msg" id="pv-calm" hidden>No runaway apps, no heat, plenty of memory and disk. Vitals will speak up if that changes.</div>
-        <div class="grid3">
-          <div class="tile"><small>CPU</small><b id="t-cpu">64%</b><div class="meter"><span id="m-cpu" style="width:64%"></span></div><i id="t-cpu-c">Warm</i></div>
-          <div class="tile"><small>Memory</small><b>58%</b><div class="meter"><span style="width:58%"></span></div><i>Pressure: Normal</i></div>
-          <div class="tile"><small>Battery</small><b>71%</b><div class="meter"><span style="width:71%"></span></div><i id="t-bat-c">Using 18 W</i></div>
-          <div class="tile"><small>Disk</small><b>142 GB</b><i>free</i></div>
-          <div class="tile"><small>Network</small><b>1.2 MB/s</b><i>↑ 84 KB/s</i></div>
-          <div class="tile"><small>Uptime</small><b>6d 3h</b><i>since restart</i></div>
+        <div>
+          <h3 id="pv-title">One thing needs your attention</h3>
+          <p id="pv-sub">Watching quietly · Battery lasts until 2:20 PM</p>
         </div>
       </div>
+      <div class="issue" id="pv-issue">
+        <div class="appicon" style="background: linear-gradient(135deg,#f5a524,#d63a2f)">!</div>
+        <div>
+          <h4>Your Mac is running hot</h4>
+          <p>macOS is slowing things down to cool off, so apps feel sluggish and the battery drains faster. Close what you're not using, or check Activity Monitor for the busiest app.</p>
+          <div class="actions"><span class="chip go">Open Activity Monitor</span><span class="chip">Snooze</span><span class="chip">···</span></div>
+        </div>
+      </div>
+      <div class="calm-msg" id="pv-calm" hidden>No heat, plenty of memory and disk. Vitals will speak up if that changes.</div>
+      <div class="grid3">
+        <div class="tile"><small>CPU</small><b id="t-cpu">64%</b><div class="meter"><span id="m-cpu" style="width:64%"></span></div><i id="t-cpu-c">Warm</i></div>
+        <div class="tile"><small>Memory</small><b>58%</b><div class="meter"><span style="width:58%"></span></div><i>Pressure: Normal</i></div>
+        <div class="tile"><small>Battery</small><b>71%</b><div class="meter"><span style="width:71%"></span></div><i id="t-bat-c">Using 18 W</i></div>
+        <div class="tile"><small>Disk</small><b>142 GB</b><i>free</i></div>
+        <div class="tile"><small>Network</small><b>1.2 MB/s</b><i>↑ 84 KB/s</i></div>
+        <div class="tile"><small>Uptime</small><b>6d 3h</b><i>since restart</i></div>
+      </div>
     </div>
-  </header>
+  </div>
+</header>
 
-  <section id="catches">
+<section id="catches">
+  <div class="sec-head">
+    <h2>It stays silent until there's something worth saying.</h2>
+    <p>Vitals waits until a problem has lasted long enough to matter, then tells you what's happening, why it matters, and what to do about it.</p>
+  </div>
+  <div class="alerts">
+    <article class="alert">
+      <div class="kind">Heat <span class="sev crit">Act now</span></div>
+      <h3>Your Mac is running hot</h3>
+      <p>macOS is slowing things down to cool off. Vitals tells you before the fans and the lag make it obvious.</p>
+      <div class="fix">Fix: Open Activity Monitor · Snooze</div>
+    </article>
+    <article class="alert">
+      <div class="kind">Memory <span class="sev warn">Warning</span></div>
+      <h3>Your Mac is out of memory</h3>
+      <p>It's using the disk as overflow, so everything feels slower. Closing a few apps or tabs gets it back.</p>
+      <div class="fix">Fix: Open Activity Monitor · Snooze</div>
+    </article>
+    <article class="alert">
+      <div class="kind">Disk <span class="sev note">Heads up</span></div>
+      <h3>Disk space is running low</h3>
+      <p>Below about 5 GB free, apps can crash and macOS updates fail. Free Up Space shows exactly what to clear.</p>
+      <div class="fix">Fix: Free Up Space · Manage Storage</div>
+    </article>
+    <article class="alert">
+      <div class="kind">Restart <span class="sev note">Heads up</span></div>
+      <h3>Time for a restart</h3>
+      <p>After about two weeks without one, a restart clears slowdowns and finishes pending updates. Whenever it suits you.</p>
+      <div class="fix">Fix: Snooze · Always ignore</div>
+    </article>
+    <article class="alert">
+      <div class="kind">Battery drain <span class="pro">PRO</span></div>
+      <h3>Battery is draining fast</h3>
+      <p>You're losing about 28% an hour, well above your usual. At this rate it lasts 2h 30m instead of 7h.</p>
+      <div class="fix">Fix: Plan with “Will my battery last?”</div>
+    </article>
+    <article class="alert">
+      <div class="kind">While you were away</div>
+      <h3>Away for 7h 12m · lost 23%</h3>
+      <p>When you come back, Vitals shows how long your Mac actually slept and whether the battery drop was normal.</p>
+      <div class="fix">Stays quiet when it was normal</div>
+    </article>
+  </div>
+</section>
+
+<section id="space">
+  <div class="away">
     <div class="sec-head">
-      <h2>It stays silent until there's something worth saying.</h2>
-      <p>Vitals learns what normal looks like on your Mac, waits until a problem has lasted long enough to matter, then tells you what's happening, why it matters, and what to do.</p>
-    </div>
-    <div class="alerts">
-      <article class="alert">
-        <div class="kind">Runaway app <span class="sev warn">Warning</span></div>
-        <h3>Google Chrome is working hard</h3>
-        <p>182% CPU for 12 minutes across 23 helper processes. Vitals rolls every helper into the app you know.</p>
-        <div class="fix">Fix: Quit Chrome · Snooze · Always ignore</div>
-      </article>
-      <article class="alert">
-        <div class="kind">Heat <span class="sev crit">Act now</span></div>
-        <h3>Your Mac is running hot</h3>
-        <p>macOS is slowing things down to cool off. The biggest load right now is Xcode at 310% CPU.</p>
-        <div class="fix">Fix: Quit Xcode · Open Activity Monitor</div>
-      </article>
-      <article class="alert">
-        <div class="kind">Battery drain <span class="pro">PRO</span></div>
-        <h3>Battery is draining fast</h3>
-        <p>You're losing about 28% an hour. At this rate it lasts 2h 30m instead of your usual 7h. Biggest drain: Zoom (61% of app energy).</p>
-        <div class="fix">Fix: Quit Zoom · Snooze</div>
-      </article>
-      <article class="alert">
-        <div class="kind">Sleep blocker <span class="pro">PRO</span></div>
-        <h3>Microsoft Teams is keeping your Mac awake</h3>
-        <p>It has stopped your Mac from sleeping for 2h 15m while you were away. On battery, this can empty it overnight.</p>
-        <div class="fix">Fix: Quit Teams · Always ignore</div>
-      </article>
-      <article class="alert">
-        <div class="kind">Memory <span class="sev warn">Warning</span></div>
-        <h3>Your Mac is out of memory</h3>
-        <p>It's using the disk as overflow (6.2 GB of swap), so everything feels slower. Figma is using the most: 5.1 GB.</p>
-        <div class="fix">Fix: Quit Figma · Close tabs you don't need</div>
-      </article>
-      <article class="alert">
-        <div class="kind">Disk & restart <span class="sev note">Heads up</span></div>
-        <h3>Disk space is running low</h3>
-        <p>Only 7.8 GB is free. Below about 5 GB, apps can crash and updates fail. Vitals also nudges you after two weeks without a restart.</p>
-        <div class="fix">Fix: Manage Storage</div>
-      </article>
-    </div>
-  </section>
-
-  <section id="away">
-    <div class="away">
-      <div class="sec-head">
-        <h2>Find out what happened while you were away.</h2>
-        <p>Close the lid at night, open it at 30%? When you come back, Vitals shows how long your Mac actually slept, what kept it awake, and which apps used the energy.</p>
-        <div class="checks">
-          <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m5 12 5 5 9-10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Compares what you lost with what a sleeping Mac should lose.</span></div>
-          <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m5 12 5 5 9-10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Names the app that held your Mac awake, with its own stated reason.</span></div>
-          <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m5 12 5 5 9-10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Stays quiet when the drop was normal.</span></div>
-        </div>
-      </div>
-      <div class="report" aria-label="Example away report">
-        <div class="cap">While you were away</div>
-        <h3>Away for 7h 12m · lost 23%, more than it should</h3>
-        <p style="color: var(--muted); font-size: 14px">Your Mac slept 1h 5m and stayed awake 6h 7m. zoom.us kept it awake for 6h 2m (“Zoom meeting in progress”). zoom.us used 64% of the energy apps used.</p>
-        <div class="row"><span>zoom.us</span><div class="bar"><span style="width:64%"></span></div><b>64%</b></div>
-        <div class="row"><span>Google Chrome</span><div class="bar"><span style="width:21%"></span></div><b>21%</b></div>
-        <div class="row"><span>Dropbox</span><div class="bar"><span style="width:8%"></span></div><b>8%</b></div>
+      <h2>Disk full? See exactly what to clear.</h2>
+      <p>Free Up Space scans your home folder on your Mac and sorts what it finds into plain groups, biggest first. Nothing is deleted for you: you pick, and it goes to the Trash, where you can still put it back.</p>
+      <div class="checks">
+        <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m5 12 5 5 9-10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Old downloads and installers, large files and duplicates.</span></div>
+        <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m5 12 5 5 9-10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Screenshots piling up on your Desktop.</span></div>
+        <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="m5 12 5 5 9-10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>App caches and developer build folders that rebuild themselves.</span></div>
       </div>
     </div>
-  </section>
+    <div class="report" aria-label="Example Free Up Space result">
+      <div class="cap">Free Up Space</div>
+      <h3>38.4 GB you could clear</h3>
+      <p style="color: var(--muted); font-size: 14px">Scanned on this Mac. Pick what to move to the Trash.</p>
+      <div class="row"><span>Downloads</span><div class="bar"><span style="width:52%"></span></div><b>19.9 GB</b></div>
+      <div class="row"><span>Large files</span><div class="bar"><span style="width:24%"></span></div><b>9.2 GB</b></div>
+      <div class="row"><span>Caches</span><div class="bar"><span style="width:15%"></span></div><b>5.8 GB</b></div>
+      <div class="row"><span>Duplicates</span><div class="bar"><span style="width:9%"></span></div><b>3.5 GB</b></div>
+    </div>
+  </div>
+</section>
 
-  <section>
-    <div class="sec-head">
-      <h2>Answers, not graphs.</h2>
-      <p>System monitors are great if you enjoy watching charts. Vitals is for everyone else.</p>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th></th><th>What you get</th><th>When it talks to you</th><th>Price</th></tr></thead>
-        <tbody>
-          <tr class="us"><td>Vitals</td><td>Plain-English problems with the app to blame and a one-click fix</td><td>Only when something is wrong</td><td>Free · Pro $5.99 once</td></tr>
-          <tr><td>Graph monitors</td><td>Dozens of live numbers and charts</td><td>Always; you do the interpreting</td><td>Free to ~$12</td></tr>
-          <tr><td>“Cleaner” apps</td><td>Scans, junk files, scary warnings</td><td>Whenever they want to sell you something</td><td>Yearly subscription</td></tr>
-          <tr><td>Activity Monitor</td><td>Raw process list; Chrome appears as 40 helpers</td><td>Never, you have to go looking</td><td>Built in</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+<section>
+  <div class="sec-head">
+    <h2>Answers, not graphs.</h2>
+    <p>System monitors are great if you enjoy watching charts. Vitals is for everyone else.</p>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>What you get</th><th>When it talks to you</th><th>Price</th></tr></thead>
+      <tbody>
+        <tr class="us"><td>Vitals</td><td>Plain-English problems and what to do about them</td><td>Only when something is wrong</td><td>Free · Pro $5.99 once</td></tr>
+        <tr><td>Graph monitors</td><td>Dozens of live numbers and charts</td><td>Always; you do the interpreting</td><td>Free to ~$12</td></tr>
+        <tr><td>“Cleaner” apps</td><td>Scans, junk files, scary warnings</td><td>Whenever they want to sell you something</td><td>Yearly subscription</td></tr>
+        <tr><td>Activity Monitor</td><td>A raw process list</td><td>Never, you have to go looking</td><td>Built in</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
 
-  <section id="pricing">
-    <div class="sec-head">
-      <h2>Free to use. $5.99 once for everything.</h2>
-      <p>Try every Pro feature free for 14 days. No account, no subscription, no renewals.</p>
+<section id="pricing">
+  <div class="sec-head">
+    <h2>Free to use. $5.99 once for everything.</h2>
+    <p>Try every Pro feature free for 14 days. No account, no subscription, no automatic charge.</p>
+  </div>
+  <div class="plans">
+    <div class="plan">
+      <h3>Vitals</h3>
+      <div class="price">Free</div>
+      <ul>
+        <li>Health light in your menu bar, with the reason when something's wrong</li>
+        <li>Heat, memory, low disk and restart alerts as Mac notifications, with Snooze and Ignore right on them</li>
+        <li>Battery “lasts until…” forecast</li>
+        <li>Free Up Space scan</li>
+        <li>Where your data went: today</li>
+        <li>Keep Awake and a global shortcut</li>
+      </ul>
+      <a class="btn" href="https://apps.apple.com/app/idREPLACE-WITH-APP-ID">Get it on the Mac App Store</a>
     </div>
-    <div class="plans">
-      <div class="plan">
-        <h3>Vitals</h3>
-        <div class="price">Free</div>
-        <ul>
-          <li>Health light in your menu bar</li>
-          <li>Runaway app, heat, memory and disk alerts</li>
-          <li>One-click Quit, Snooze and Ignore</li>
-          <li>Live dashboard and top apps</li>
-        </ul>
-        <a class="btn" href="https://github.com/">Download for Mac</a>
-      </div>
-      <div class="plan feature">
-        <h3>Vitals Pro <span class="pro">PRO</span></h3>
-        <div class="price">$5.99 <small>once · all features · up to 3 Macs</small></div>
-        <ul>
-          <li>Everything in Vitals</li>
-          <li>Live readings in the menu bar, with icons and colors</li>
-          <li>“Will my battery last?” and fast-drain alerts</li>
-          <li>One-click clearing in Free Up Space</li>
-          <li>Where your time went — the 7-day view</li>
-          <li>Tidy your menu bar (full version)</li>
-          <li>14-day free trial first</li>
-        </ul>
-        <a class="btn primary" href="https://www.lemonsqueezy.com/">Buy Pro</a>
-      </div>
+    <div class="plan feature">
+      <h3>Vitals Pro <span class="pro">PRO</span></h3>
+      <div class="price">$5.99 <small>once · in-app purchase · every feature</small></div>
+      <ul>
+        <li>Everything in Vitals</li>
+        <li>Live readings in the menu bar (CPU, GPU, memory, network, disk, world clock), with colors</li>
+        <li>Pin live readings anywhere on your screen, in your colors</li>
+        <li>Fast-drain alerts and “Will my battery last?”</li>
+        <li>Full “While you were away” reports</li>
+        <li>One-click clearing in Free Up Space</li>
+        <li>Where your data went: 7 and 30 days</li>
+        <li>Extra icon styles</li>
+      </ul>
+      <a class="btn primary" href="https://apps.apple.com/app/idREPLACE-WITH-APP-ID">Start the free 14-day trial</a>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section id="faq">
-    <div class="sec-head"><h2>Questions</h2></div>
-    <div class="faq">
-      <details><summary>Does Vitals slow my Mac down or drain the battery itself?</summary><p>No. It checks every 5 seconds (every 10 while you're away) and typically uses well under 1% CPU. Watching it in Activity Monitor is encouraged.</p></details>
-      <details><summary>Will it nag me?</summary><p>Vitals only speaks up when a problem has lasted long enough to matter. Pick Relaxed, Balanced or Sensitive, snooze any alert, or tell it to always ignore an app.</p></details>
-      <details><summary>What does Vitals send over the internet?</summary><p>Nothing about your Mac. The only requests are activating your license key and a daily check for a new version.</p></details>
-      <details><summary>App Store or direct download?</summary><p>Both, same $5.99 price. The Mac App Store version runs in Apple's sandbox, which doesn't allow seeing which app uses your CPU or battery, quitting apps, or hiding other menu-bar icons. The direct download, notarized by Apple, includes all of that.</p></details>
-      <details><summary>Is it really one payment?</summary><p>Yes. $5.99 once unlocks every Pro feature, including future updates to 1.x. No subscription and no account. Try everything free for 14 days first.</p></details>
-      <details><summary>Which Macs are supported?</summary><p>Any Mac running macOS 14 Sonoma or later, Apple silicon or Intel. Battery features need a MacBook.</p></details>
-    </div>
-  </section>
+<section id="faq">
+  <div class="sec-head"><h2>Questions</h2></div>
+  <div class="faq">
+    <details><summary>Does Vitals slow my Mac down or drain the battery itself?</summary><p>No. It checks every few seconds and typically uses well under 1% CPU. Feel free to watch it in Activity Monitor.</p></details>
+    <details><summary>Will it nag me?</summary><p>Vitals only speaks up when a problem has lasted long enough to matter. Pick Relaxed, Balanced or Sensitive, snooze any alert, or tell it to always ignore one.</p></details>
+    <details><summary>What does Vitals send over the internet?</summary><p>Nothing. There's no account, no analytics and no tracking. Purchases go through Apple and the App Store.</p></details>
+    <details><summary>Why does it ask for my home folder?</summary><p>Mac App Store apps can only look at folders you choose. Free Up Space asks once so it can find files you might want to clear. It scans on your Mac and only moves files to the Trash when you pick them.</p></details>
+    <details><summary>How does the free trial work?</summary><p>Start it in Settings › Pro. Everything is unlocked for 14 days, with no payment details needed. When it ends, Pro features lock again and the free features keep working. You're never charged unless you buy Pro.</p></details>
+    <details><summary>Is it really one payment?</summary><p>Yes. $5.99 once unlocks every Pro feature. Use Restore Purchase on any Mac signed in to the same Apple Account.</p></details>
+    <details><summary>Which Macs are supported?</summary><p>Any Mac running macOS 14 Sonoma or later, Apple silicon or Intel. Battery features need a MacBook.</p></details>
+  </div>
+</section>
 
-  <footer>
-    <span>© 2026 Vitals · Made by an independent developer</span>
-    <span><a href="privacy.html">Privacy</a></span>
-  </footer>
+<footer>
+  <span>© 2026 Vitals · Made by an independent developer</span>
+  <span><a href="/support">Support</a> · <a href="/privacy">Privacy</a></span>
+</footer>
 </div>
-
 <script>
 (function () {
   var calmBtn = document.getElementById('st-calm');
@@ -407,7 +410,7 @@ footer { padding-block: 40px 56px; border-top: 1px solid var(--line); color: var
     document.getElementById('mb-icon').style.color = alerting ? 'var(--lamp)' : 'currentColor';
     document.getElementById('pv-badge').style.background = alerting ? 'var(--lamp)' : 'var(--calm)';
     document.getElementById('pv-title').textContent = alerting ? 'One thing needs your attention' : 'Your Mac is healthy';
-    document.getElementById('pv-sub').textContent = alerting ? 'Watching quietly · 3h 40m left' : 'Watching quietly · 9h 10m left';
+    document.getElementById('pv-sub').textContent = alerting ? 'Watching quietly · Battery lasts until 2:20 PM' : 'Watching quietly · Battery lasts until 7:50 PM';
     document.getElementById('pv-issue').hidden = !alerting;
     document.getElementById('pv-calm').hidden = alerting;
     document.getElementById('t-cpu').textContent = alerting ? '64%' : '9%';

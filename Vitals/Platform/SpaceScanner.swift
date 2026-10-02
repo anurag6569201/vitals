@@ -379,7 +379,13 @@ nonisolated enum SpaceScanner {
     ]
 
     static func developer() -> [SpaceItem] {
-        developerFolders.compactMap { path, title, detail, canTrash, contentsOnly in
+        // Other apps' containers trigger macOS's "access data from other apps" prompt in the sandbox.
+        #if APPSTORE
+        let folders = developerFolders.filter { !$0.0.hasPrefix("Library/Containers/") }
+        #else
+        let folders = developerFolders
+        #endif
+        return folders.compactMap { path, title, detail, canTrash, contentsOnly in
             let url = home.appendingPathComponent(path)
             guard FileManager.default.fileExists(atPath: url.path) else { return nil }
             let bytes = size(of: url)
@@ -430,8 +436,13 @@ nonisolated enum SpaceScanner {
                                          contentsOnly: false, group: nil, keep: false))
             }
         }
-        let backups = home.appendingPathComponent("Library/Application Support/MobileSync/Backup")
-        for url in topLevel(backups) where isDirectory(url) {
+        // Device backups need Full Disk Access; the App Store build doesn't ask for it.
+        #if APPSTORE
+        let backupFolders: [URL] = []
+        #else
+        let backupFolders = topLevel(home.appendingPathComponent("Library/Application Support/MobileSync/Backup"))
+        #endif
+        for url in backupFolders where isDirectory(url) {
             let bytes = size(of: url)
             guard bytes > 0 else { continue }
             results.append(SpaceItem(id: url.path, category: .devices, title: "Device backup", subtitle:
