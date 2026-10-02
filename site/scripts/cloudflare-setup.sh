@@ -66,15 +66,25 @@ if [ -z "$TOKEN" ] || [ -z "$ACCOUNT" ]; then
 else
   for NAME in "$DOMAIN" "www.$DOMAIN"; do
     RESULT="$(api -X POST "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/pages/projects/$PROJECT/domains" -d "{\"name\":\"$NAME\"}")"
-    if echo "$RESULT" | grep -q '"success":true'; then echo "  added $NAME"
+    if echo "$RESULT" | grep -Eq '"success": *true|"status": *"(initializing|pending|active)"'; then echo "  attached $NAME"
     elif echo "$RESULT" | grep -qi 'already'; then echo "  $NAME already attached"
     else echo "  $NAME: $(echo "$RESULT" | head -c 300)"; echo "  → add it in the dashboard: Workers & Pages › $PROJECT › Custom domains"; fi
   done
 fi
 
+step "DNS records"
+SUB="$(api "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/pages/projects/$PROJECT" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).result.subdomain)}catch{}})')"
+ZONE="$(api "https://api.cloudflare.com/client/v4/zones?name=$DOMAIN" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).result[0].id)}catch{}})')"
+for NAME in "$DOMAIN" "www.$DOMAIN"; do
+  R="$(api -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE/dns_records" -d "{\"type\":\"CNAME\",\"name\":\"$NAME\",\"content\":\"$SUB\",\"proxied\":true}" 2>/dev/null || true)"
+  if echo "$R" | grep -Eq '"success": *true'; then echo "  CNAME $NAME → $SUB"
+  elif echo "$R" | grep -qi 'already exists'; then echo "  $NAME record already exists"
+  else echo "  Couldn't create the $NAME record (Wrangler's sign-in can't edit DNS)."; echo "  → Dashboard › $DOMAIN › DNS › Records › Add: CNAME, name ${NAME%%.$DOMAIN} (or @), target $SUB, Proxied"; fi
+done
+
 step "Checking"
-echo "  Preview URL: https://$PROJECT.pages.dev"
-for URL in "https://$PROJECT.pages.dev" "https://$DOMAIN"; do
+echo "  Pages URL: https://$SUB"
+for URL in "https://$SUB" "https://$DOMAIN"; do
   CODE="$(curl -s -o /dev/null -w '%{http_code}' "$URL/" || true)"
   API="$(curl -s -X POST -H 'Content-Type: application/json' -d '{"key":"x","machine":"x"}' "$URL/api/license/validate" || true)"
   echo "  $URL → page $CODE, API: ${API:0:80}"

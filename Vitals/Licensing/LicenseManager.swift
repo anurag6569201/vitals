@@ -24,7 +24,7 @@ enum LicenseConfig {
     static let licenseServer = URL(string: "https://vitalsformac.com/api")!
     /// Ed25519 public key (base64, 32 bytes) from `node scripts/license-keys.js`.
     /// Verifies activation tokens offline.
-    static let licensePublicKey = "REPLACE-WITH-PUBLIC-KEY"
+    static let licensePublicKey = "pJiLuKE5Tj3SMjn34XJPzcCu8ZcULMjzx9ZAYruY1oE="
     static var licenseServerConfigured: Bool {
         !licenseServer.absoluteString.contains("REPLACE") && !licensePublicKey.contains("REPLACE")
     }
