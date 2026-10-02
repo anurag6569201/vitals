@@ -4,6 +4,7 @@ import Alerts, { TrustStrip } from '../sections/Alerts.jsx';
 import Pin from '../sections/Pin.jsx';
 import { BatterySection, DataUsage, FreeUpSpace, Readings, Shortcuts } from '../sections/Features.jsx';
 import { Compare, FAQ, FinalCTA, Pricing } from '../sections/Pricing.jsx';
+import Editions from '../sections/Editions.jsx';
 
 const LINKS = [
   ['#catches', 'Alerts'],
@@ -11,6 +12,7 @@ const LINKS = [
   ['#space', 'Free Up Space'],
   ['#data', 'Data'],
   ['#pricing', 'Pricing'],
+  ['#download', 'Download'],
   ['#faq', 'FAQ'],
 ];
 
@@ -31,6 +33,7 @@ export default function Home() {
         <Shortcuts />
         <Compare />
         <Pricing />
+        <Editions />
         <FAQ />
         <FinalCTA />
       </main>

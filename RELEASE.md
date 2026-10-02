@@ -1,6 +1,6 @@
 # Shipping Vitals — checklist
 
-> **Plan (30 Sep 2026): App Store only for now.** Skip sections 1–3 and 5 (direct/Lemon Squeezy/website).
+> **Plan (3 Oct 2026): two editions.** Mac App Store (sandboxed) + the full version downloaded from vitalsformac.com (Developer ID, notarized, `scripts/release.sh`). The full version is unlocked by the key that comes with an App Store purchase; Lemon Squeezy (section 2) is optional.
 > Follow **Two editions › App Store submission checklist** below. Menu-bar live readings are a Pro feature.
 
 Things marked **you** need your accounts, money or identity; everything else is scripted.
@@ -23,7 +23,7 @@ Things marked **you** need your accounts, money or identity; everything else is 
 
 - [ ] Create a GitHub repo, push this branch, enable **GitHub Pages** from `/site`.
       (Or any static host. A custom domain like `getvitals.app` helps trust and SEO.)
-- [ ] Replace `REPLACE-WITH-YOUR-SITE` in `Vitals/Licensing/UpdateChecker.swift`, `scripts/release.sh`, and `site/`.
+- [x] Site domain is vitalsformac.com (UpdateChecker, release.sh, LicenseConfig, site/src/config.js).
 - [ ] Upload DMGs to **GitHub Releases**; host `latest.json` next to the site.
 
 ## 3. Each release
@@ -119,11 +119,11 @@ How it works (code: `site/api/`, `Vitals/Licensing/LicenseManager.swift`):
    them on REFUND_REVERSED.
 
 **Set-up (once, ~15 minutes) — you:**
-1. Vercel › your site project › Storage › create a **KV / Upstash Redis** database and connect it (adds
-   `KV_REST_API_URL` and `KV_REST_API_TOKEN`).
-2. `node scripts/license-keys.js` → add `LICENSE_SIGNING_KEY` in Vercel › Settings › Environment Variables; paste the
+1. Cloudflare (see `site/README.md`): `npx wrangler login`, `npx wrangler d1 create vitals-licenses` (paste the id into
+   `site/wrangler.toml`), `npm run db:migrate`, `npx wrangler pages project create vitals`.
+2. `node scripts/license-keys.js` → `npx wrangler pages secret put LICENSE_SIGNING_KEY --project-name vitals`; paste the
    printed public key into `LicenseConfig.licensePublicKey`. Never commit the private key.
-3. Set `LicenseConfig.licenseServer` to `https://<your-domain>/api` and redeploy `site/`.
+3. Set `LicenseConfig.licenseServer` to `https://<your-domain>/api` and deploy `site/` (`npm run deploy`).
 4. App Store Connect › App Information › **App Store Server Notifications** › Production and Sandbox URL:
    `https://<your-domain>/api/apple/notifications`, Version 2.
 5. Test: sandbox-buy Pro in the App Store build → Show My License Key → paste into the direct build on another Mac.

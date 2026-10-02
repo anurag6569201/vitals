@@ -7,7 +7,7 @@ import Foundation
 /// { "version": "1.0.1", "url": "https://…/Vitals-1.0.1.dmg", "notes": "Fixes…" }
 @MainActor
 final class UpdateChecker: ObservableObject {
-    static let feedURL = URL(string: "https://REPLACE-WITH-YOUR-SITE/vitals/latest.json")!
+    static let feedURL = URL(string: "https://vitalsformac.com/vitals/latest.json")!
 
     struct Release: Decodable {
         let version: String

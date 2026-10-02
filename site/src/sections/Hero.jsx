@@ -69,7 +69,7 @@ export default function Hero() {
         </p>
         <div className="ctas">
           <AppStoreButton />
-          <a className="btn ghost" href="#catches">See what it catches</a>
+          <a className="btn ghost" href="#download">Or download the full version</a>
         </div>
         <ul className="fine-list">
           <li>Free download</li>

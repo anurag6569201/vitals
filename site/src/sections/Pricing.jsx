@@ -1,5 +1,5 @@
 import { Section, SecHead, ProTag } from './common.jsx';
-import { AppStoreButton } from '../components/Layout.jsx';
+import { AppStoreButton, DownloadButton } from '../components/Layout.jsx';
 import { Check, Lock } from '../components/Icons.jsx';
 import { PRICE, TRIAL_DAYS, MIN_MACOS } from '../config.js';
 
@@ -88,9 +88,10 @@ export function Pricing() {
             <li>Fast-drain alerts and “Will my battery last?” with Low Power Mode advice</li>
             <li>One-click clearing in Free Up Space, and complete app removal</li>
             <li>7- and 30-day data history, full “While you were away”</li>
-            <li>Works on every Mac signed in to your Apple Account</li>
+            <li>App Store: every Mac on your Apple Account, plus a key for the full version</li>
           </ul>
           <AppStoreButton>Start the free trial</AppStoreButton>
+          <a className="plan-alt" href="#download">Prefer the full version? Same price, see the two editions ↑</a>
         </div>
       </div>
 
@@ -110,6 +111,8 @@ export function Pricing() {
 }
 
 const FAQS = [
+  ['App Store or full version — which should I get?', 'If you just want to know when your Mac needs attention, the App Store edition is the simplest. Get the full version if you want Vitals to name and quit the app behind a problem, show per-app battery and data use, or hide menu-bar icons. Pro costs the same in both, and an App Store purchase includes a key for the full version.'],
+  ['Is the download safe?', 'Yes. The full version is signed with Apple’s Developer ID and notarized by Apple, so macOS checks it before it opens. Drag Vitals to Applications and open it like any other app.'],
   ['Does Vitals slow my Mac down or drain the battery itself?', 'No. It checks every few seconds and typically uses well under 1% CPU. Feel free to watch it in Activity Monitor.'],
   ['Will it nag me?', 'Vitals only speaks up when a problem has lasted long enough to matter. Pick Relaxed, Balanced or Sensitive, snooze any alert, or tell it to always ignore one. And no notification ever advertises Pro.'],
   ['What does Vitals send over the internet?', 'Nothing about you. There’s no account, no analytics and no tracking. The optional Ping reading times a connection to Apple’s captive.apple.com, and showing or activating a license key talks to our license server. Purchases go through Apple.'],
@@ -146,8 +149,11 @@ export function FinalCTA() {
       <div className="wrap final-inner">
         <div className="final-lamp" aria-hidden="true"><span /></div>
         <h2>Let your Mac tell you what’s wrong.</h2>
-        <p>Free on the Mac App Store. Pro is {PRICE} once, with a {TRIAL_DAYS}-day free trial.</p>
-        <AppStoreButton />
+        <p>Free on the Mac App Store or as a direct download. Pro is {PRICE} once, with a {TRIAL_DAYS}-day free trial.</p>
+        <div className="ctas center">
+          <AppStoreButton />
+          <DownloadButton variant="ghost" />
+        </div>
       </div>
     </section>
   );

@@ -40,8 +40,16 @@ xcrun stapler staple "$OUT/Vitals-$VERSION.dmg"
 spctl -a -t open --context context:primary-signature -v "$OUT/Vitals-$VERSION.dmg"
 
 cat > "$OUT/latest.json" <<JSON
-{ "version": "$VERSION", "url": "https://REPLACE-WITH-YOUR-SITE/vitals/Vitals-$VERSION.dmg", "notes": "" }
+{ "version": "$VERSION", "url": "https://vitalsformac.com/vitals/Vitals-$VERSION.dmg", "notes": "" }
 JSON
 
+# Publish into the website: a versioned DMG, a stable Vitals.dmg for the Download button, and the update feed.
+SITE_DL="$(dirname "$0")/../site/public/vitals"
+mkdir -p "$SITE_DL"
+cp "$OUT/Vitals-$VERSION.dmg" "$SITE_DL/"
+cp "$OUT/Vitals-$VERSION.dmg" "$SITE_DL/Vitals.dmg"
+cp "$OUT/latest.json" "$SITE_DL/latest.json"
+
 echo "✓ Done: $OUT/Vitals-$VERSION.dmg"
-echo "  Upload the DMG and latest.json to your site (see RELEASE.md)."
+echo "  Copied to site/public/vitals/ (Vitals.dmg, Vitals-$VERSION.dmg, latest.json)."
+echo "  Commit and push to deploy, or run: cd site && npm run deploy"

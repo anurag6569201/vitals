@@ -1,0 +1,14 @@
+# Cloudflare Pages: the React site (dist/) + license server (functions/api/*) + D1.
+name = "vitals"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vitals-licenses"
+# Created 3 Oct 2026 (tables from migrations/0001 already applied).
+database_id = "8e6add10-1db6-40af-a1ec-2fddd665e3ce"
+migrations_dir = "migrations"
+
+# Secret, set once (never committed):  npx wrangler pages secret put LICENSE_SIGNING_KEY

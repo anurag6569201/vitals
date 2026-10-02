@@ -1,4 +1,5 @@
 node_modules/
 dist/
 .ssr/
-.vercel
+.wrangler/
+.dev.vars

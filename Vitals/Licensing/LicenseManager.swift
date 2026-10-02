@@ -19,13 +19,15 @@ enum LicenseConfig {
     /// Shown until StoreKit reports the localized App Store price. Keep in sync with Lemon Squeezy
     /// and the App Store Connect price (see RELEASE.md › Pricing).
     static let displayPrice = "$9.99"
-    /// Vitals license server (site/api on Vercel). Issues one key per App Store purchase and
+    /// Vitals license server (site/functions/api on Cloudflare Pages). Issues one key per App Store purchase and
     /// activates keys in the direct edition, one Mac per key.
-    static let licenseServer = URL(string: "https://REPLACE-WITH-YOUR-SITE/api")!
+    static let licenseServer = URL(string: "https://vitalsformac.com/api")!
     /// Ed25519 public key (base64, 32 bytes) from `node scripts/license-keys.js`.
     /// Verifies activation tokens offline.
     static let licensePublicKey = "REPLACE-WITH-PUBLIC-KEY"
-    static var licenseServerConfigured: Bool { !licenseServer.absoluteString.contains("REPLACE") }
+    static var licenseServerConfigured: Bool {
+        !licenseServer.absoluteString.contains("REPLACE") && !licensePublicKey.contains("REPLACE")
+    }
 }
 
 enum LicenseState: Equatable {

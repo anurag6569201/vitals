@@ -3,9 +3,9 @@ import { SUPPORT_EMAIL } from '../config.js';
 
 export default function Privacy() {
   return (
-    <DocPage title="Privacy Policy" lede={<p className="muted">Last updated: 2 October 2026</p>}>
+    <DocPage title="Privacy Policy" lede={<p className="muted">Last updated: 3 October 2026</p>}>
       <div className="card"><b>In short:</b> Vitals collects no data. Everything it reads and stores stays on your Mac.</div>
-      <p>This policy covers Vitals for Mac, distributed on the Mac App Store.</p>
+      <p>This policy covers Vitals for Mac: the Mac App Store edition and the full version downloaded from this site.</p>
 
       <h2>What Vitals reads</h2>
       <p>CPU, GPU, memory, disk, network totals, battery and thermal state, display refresh rate and Wi‑Fi signal strength. It uses these only to show readings and alerts on your Mac.</p>
@@ -24,8 +24,11 @@ export default function Privacy() {
       <h2>What Vitals sends</h2>
       <p>Only if you turn on the optional <b>Ping</b> reading: every few seconds Vitals opens (and immediately closes) a connection to Apple’s connectivity-check server, captive.apple.com, to time how long it takes. No information about you or your Mac is sent. Otherwise, nothing. Vitals has no analytics, no advertising, no tracking, no third-party code that collects data, and no account.</p>
 
+      <h2>The full version</h2>
+      <p>The full version can also see which apps are using your Mac (to name and quit the one causing a problem) and how much data each app uses. It reads this on your Mac and keeps it there. Once a day it downloads a small file from vitalsformac.com to see whether an update is available; nothing about you or your Mac is sent with that request.</p>
+
       <h2>Purchases</h2>
-      <p>The free trial and Vitals Pro are in-app purchases handled by Apple. Vitals never sees your payment details. If you choose <b>Show My License Key</b>, Vitals sends Apple’s signed record of your Pro purchase (it contains no name, email or payment details) to our license server, which returns your key. When you activate a key, Vitals sends the key and an anonymous, one-way hash of your Mac’s hardware id so the key can be limited to one Mac. See <a href="https://www.apple.com/legal/privacy/">Apple’s Privacy Policy</a>.</p>
+      <p>In the App Store edition, the free trial and Vitals Pro are in-app purchases handled by Apple. Vitals never sees your payment details. If you choose <b>Show My License Key</b>, Vitals sends Apple’s signed record of your Pro purchase (it contains no name, email or payment details) to our license server, which returns your key. When you activate a key, Vitals sends the key and an anonymous, one-way hash of your Mac’s hardware id so the key can be limited to one Mac. See <a href="https://www.apple.com/legal/privacy/">Apple’s Privacy Policy</a>. If you buy a license key on this site, the purchase is handled by our reseller, Lemon Squeezy, under its own privacy policy; Vitals never sees your payment details.</p>
 
       <h2>This website</h2>
       <p>This website uses no cookies, analytics or trackers. Fonts are loaded from Google Fonts. If you pick a light or dark theme here, that choice is saved in your browser only.</p>

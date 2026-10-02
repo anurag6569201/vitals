@@ -2,6 +2,12 @@ import { DocPage } from '../components/Layout.jsx';
 import { SUPPORT_EMAIL, PRICE, TRIAL_DAYS } from '../config.js';
 
 const QA = [
+  ['How do I install the full version?', <>
+    <p>Download <a href="/vitals/Vitals.dmg">Vitals.dmg</a>, open it and drag Vitals to Applications, then open it from there. It’s signed with Apple’s Developer ID and notarized by Apple, so macOS opens it without warnings.</p>
+    <p>To hide menu-bar icons, Vitals asks for Accessibility permission in System Settings › Privacy & Security › Accessibility. Everything else works without it.</p>
+  </>],
+  ['What’s the difference between the App Store and full versions?', <p>The App Store version runs in Apple’s sandbox, so it can’t see or quit other apps or hide menu-bar icons. The full version adds runaway-app alerts with one-click Quit, per-app battery and data use, the busiest app in your menu bar, and menu-bar icon hiding. Pro costs the same in both. See <a href="/#download">the comparison</a>.</p>],
+  ['How does the full version update?', <p>It checks this site once a day and tells you in its menu when a new version is out. Updates of the App Store version come through the App Store.</p>],
   ['I can’t see the Vitals icon in the menu bar', <>
     <p>On MacBooks with a notch, icons that don’t fit are hidden behind the notch or in the overflow menu. Try:</p>
     <ul>

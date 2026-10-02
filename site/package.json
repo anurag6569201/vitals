@@ -2,11 +2,14 @@
   "name": "vitals-site",
   "private": true,
   "version": "1.0.0",
-  "description": "Website for Vitals for Mac — React + Vite, prerendered to static HTML. /api holds the license server (Vercel functions).",
+  "description": "Website for Vitals for Mac \u2014 React + Vite, prerendered to static HTML, on Cloudflare Pages. functions/api holds the license server (Pages Functions + D1).",
   "scripts": {
     "dev": "vite",
     "build": "vite build && vite build --ssr src/entry-server.jsx --outDir .ssr && node scripts/prerender.mjs",
-    "preview": "vite preview"
+    "preview": "npm run build && wrangler pages dev",
+    "deploy": "npm run build && wrangler pages deploy",
+    "db:migrate": "wrangler d1 migrations apply vitals-licenses --remote",
+    "db:migrate:local": "wrangler d1 migrations apply vitals-licenses --local"
   },
   "engines": {
     "node": ">=20.19"
@@ -17,6 +20,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.0",
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "wrangler": "^4.147.0"
   }
 }

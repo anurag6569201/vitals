@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { APP_STORE_URL } from '../config.js';
-import { Apple, Auto, Moon, Pulse, Sun } from './Icons.jsx';
+import { APP_STORE_URL, DOWNLOAD_URL } from '../config.js';
+import { Apple, Auto, Download, Moon, Pulse, Sun } from './Icons.jsx';
 
 export function Logo({ size = 26 }) {
   return (
@@ -46,6 +46,14 @@ export function AppStoreButton({ children = 'Get it on the Mac App Store', varia
   );
 }
 
+export function DownloadButton({ children = 'Download the full version', variant = 'primary', className = '' }) {
+  return (
+    <a className={`btn ${variant} ${className}`} href={DOWNLOAD_URL} download>
+      <Download /> {children}
+    </a>
+  );
+}
+
 export function Nav({ links }) {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -65,7 +73,7 @@ export function Nav({ links }) {
         </div>
         <div className="nav-end">
           <ThemeToggle />
-          <a className="btn primary small nav-cta" href={APP_STORE_URL}>Download</a>
+          <a className="btn primary small nav-cta" href="/#download">Download</a>
         </div>
       </nav>
     </div>
@@ -94,6 +102,7 @@ export function Footer() {
           <a href="/#faq">FAQ</a>
           <a href="/privacy">Privacy</a>
           <a href={APP_STORE_URL}>Mac App Store</a>
+          <a href="/#download">Full version download</a>
         </div>
       </div>
       <p className="footer-fine">© 2026 Vitals · Mac, macOS and Mac App Store are trademarks of Apple Inc.</p>
