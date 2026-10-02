@@ -4,6 +4,7 @@ import CoreServices
 import CryptoKit
 import Darwin
 import Foundation
+import UniformTypeIdentifiers
 
 // MARK: - Model
 
@@ -49,7 +50,7 @@ nonisolated enum SpaceCategory: String, CaseIterable, Identifiable, Sendable {
         case .installers: "Disk images and installers you've already used, and archives you've already unzipped."
         case .screenshots: "Screenshots and screen recordings older than a month."
         case .duplicates: "Identical copies of the same file. Vitals keeps the newest copy selected to stay."
-        case .unusedApps: "Apps you haven't opened in 3 months or more."
+        case .unusedApps: "Apps you haven't opened in 3 months or more. Removing one also clears the settings, caches and data it left in your Library."
         case .caches: "Temporary files apps rebuild on their own, including leftovers from apps you've deleted."
         case .developer: "Build caches and tools that rebuild or re-download themselves."
         case .devices: "iPhone and iPad software updates and backups."
@@ -82,6 +83,8 @@ nonisolated struct SpaceItem: Identifiable, Sendable, Hashable {
     let group: String?
     /// Duplicates: the copy Vitals suggests keeping.
     let keep: Bool
+    /// Apps: settings, caches and other files the app left in your Library, trashed along with it.
+    var extraPaths: [String] = []
 }
 
 // MARK: - Folder access
@@ -136,9 +139,50 @@ enum SpaceAccess {
         UserDefaults.standard.set(data, forKey: bookmarkKey)
         return restore()
     }
+    // Removing apps: sandboxed builds also need the person to choose the Applications folder once.
+    private static let appsBookmarkKey = "vitals.space.applicationsBookmark"
+    private static var appsAccessed: URL?
+
+    static var canRemoveApps: Bool { appsAccessed != nil || restoreApps() }
+
+    @discardableResult
+    static func restoreApps() -> Bool {
+        guard appsAccessed == nil, let data = UserDefaults.standard.data(forKey: appsBookmarkKey) else { return appsAccessed != nil }
+        var stale = false
+        guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope,
+                                 relativeTo: nil, bookmarkDataIsStale: &stale),
+              url.startAccessingSecurityScopedResource() else { return false }
+        appsAccessed = url
+        if stale, let fresh = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil,
+                                                    relativeTo: nil) {
+            UserDefaults.standard.set(fresh, forKey: appsBookmarkKey)
+        }
+        return true
+    }
+
+    @discardableResult
+    static func requestApps() -> Bool {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.directoryURL = URL(fileURLWithPath: "/")
+        panel.prompt = "Allow"
+        panel.message = "Choose the Applications folder so Vitals can move apps you pick to the Trash."
+        NSApp.activate()
+        guard panel.runModal() == .OK, let url = panel.url,
+              let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+        else { return false }
+        appsAccessed?.stopAccessingSecurityScopedResource()
+        appsAccessed = nil
+        UserDefaults.standard.set(data, forKey: appsBookmarkKey)
+        return restoreApps()
+    }
     #else
     static var isGranted: Bool { true }
     @discardableResult static func request() -> Bool { true }
+    static var canRemoveApps: Bool { true }
+    @discardableResult static func requestApps() -> Bool { true }
     #endif
 }
 
@@ -323,16 +367,25 @@ nonisolated enum SpaceScanner {
                 let used = lastUsed(app)
                 if let used, used > cutoff { continue }
                 if used == nil, let added = dateAdded(app) ?? modified(app), added > cutoff { continue }
-                let bytes = size(of: app)
-                guard bytes >= 50_000_000 else { continue }
-                let name = app.deletingPathExtension().lastPathComponent
-                let subtitle = used.map { "Last opened \($0.formatted(.relative(presentation: .named)))" } ?? "Never opened on this Mac"
-                results.append(SpaceItem(id: app.path, category: .unusedApps, title: name, subtitle: subtitle,
-                                         path: app.path, bytes: bytes, lastUsed: used, canTrash: true,
-                                         contentsOnly: false, group: nil, keep: false))
+                let appBytes = size(of: app)
+                guard appBytes >= 50_000_000 else { continue }
+                let used2 = used.map { "Last opened \($0.formatted(.relative(presentation: .named)))" } ?? "Never opened on this Mac"
+                results.append(appItem(app, appBytes: appBytes, lastUsed: used, detail: used2))
             }
         }
         return results.sorted { $0.bytes > $1.bytes }
+    }
+
+    /// An app plus the files it left in your Library, as one item.
+    static func appItem(_ app: URL, appBytes: UInt64? = nil, lastUsed: Date?, detail: String) -> SpaceItem {
+        let leftovers = AppLeftovers.find(for: app)
+        let leftoverBytes = leftovers.reduce(UInt64(0)) { $0 + size(of: $1) }
+        let bytes = (appBytes ?? size(of: app)) + leftoverBytes
+        var subtitle = detail
+        if leftoverBytes >= 1_000_000 { subtitle += " · includes \(ByteCountFormatter.string(fromByteCount: Int64(clamping: leftoverBytes), countStyle: .file)) of app data" }
+        return SpaceItem(id: app.path, category: .unusedApps, title: app.deletingPathExtension().lastPathComponent,
+                         subtitle: subtitle, path: app.path, bytes: bytes, lastUsed: lastUsed, canTrash: true,
+                         contentsOnly: false, group: nil, keep: false, extraPaths: leftovers.map(\.path))
     }
 
     // MARK: Caches
@@ -475,6 +528,9 @@ nonisolated enum SpaceScanner {
             } else {
                 try fm.trashItem(at: url, resultingItemURL: nil)
             }
+            for extra in item.extraPaths {
+                try? fm.trashItem(at: URL(fileURLWithPath: extra), resultingItemURL: nil)
+            }
             return item.bytes
         } catch {
             return nil
@@ -577,6 +633,53 @@ nonisolated enum SpaceScanner {
     }
 }
 
+// MARK: - App leftovers
+
+/// Finds what an app leaves in ~/Library: settings, caches, saved state, logs and support files.
+/// Only exact matches on the app's bundle identifier or name, so nothing shared is touched.
+nonisolated enum AppLeftovers {
+    /// Shared vendor folders that are never removed with a single app.
+    private static let sharedNames: Set<String> = [
+        "apple", "google", "microsoft", "adobe", "mozilla", "jetbrains", "crashreporter", "com.apple",
+        "steam", "unity", "autodesk", "logitech", "zoom", "app", "applications",
+    ]
+
+    static func find(for app: URL) -> [URL] {
+        guard let bundle = Bundle(url: app), let id = bundle.bundleIdentifier, id.count > 3,
+              !id.hasPrefix("com.apple."), id != Bundle.main.bundleIdentifier else { return [] }
+        let fm = FileManager.default
+        let library = SpaceScanner.home.appendingPathComponent("Library")
+        var names = [app.deletingPathExtension().lastPathComponent]
+        if let bundleName = bundle.object(forInfoDictionaryKey: "CFBundleName") as? String { names.append(bundleName) }
+        names = Array(Set(names.filter { $0.count >= 3 && !sharedNames.contains($0.lowercased()) }))
+
+        var paths = [
+            "Application Support/\(id)", "Caches/\(id)", "Preferences/\(id).plist",
+            "Saved Application State/\(id).savedState", "HTTPStorages/\(id)", "HTTPStorages/\(id).binarycookies",
+            "WebKit/\(id)", "Logs/\(id)", "Cookies/\(id).binarycookies", "Application Scripts/\(id)",
+        ]
+        for name in names {
+            paths += ["Application Support/\(name)", "Caches/\(name)", "Logs/\(name)"]
+        }
+        #if !APPSTORE
+        // Other apps' containers trigger macOS's "access data from other apps" prompt in the sandbox.
+        paths.append("Containers/\(id)")
+        #endif
+
+        var found = paths.map { library.appendingPathComponent($0) }.filter { fm.fileExists(atPath: $0.path) }
+        for url in SpaceScanner.topLevel(library.appendingPathComponent("Preferences/ByHost"))
+        where url.lastPathComponent.hasPrefix(id + ".") {
+            found.append(url)
+        }
+        for url in SpaceScanner.topLevel(library.appendingPathComponent("LaunchAgents"))
+        where url.lastPathComponent.hasPrefix(id) && url.pathExtension == "plist" {
+            found.append(url)
+        }
+        var seen = Set<String>()
+        return found.filter { seen.insert($0.standardizedFileURL.path).inserted }
+    }
+}
+
 // MARK: - View model
 
 @MainActor
@@ -671,6 +774,46 @@ final class SpaceModel: ObservableObject {
     func select(all category: SpaceCategory, _ on: Bool) {
         for item in items[category] ?? [] where item.canTrash {
             if on { selection.insert(item.id) } else { selection.remove(item.id) }
+        }
+    }
+
+    // MARK: Removing apps
+
+    /// App Store builds need the Applications folder chosen once before apps can go to the Trash.
+    @Published private(set) var canRemoveApps = SpaceAccess.canRemoveApps
+
+    func allowRemovingApps() {
+        if SpaceAccess.requestApps() { canRemoveApps = true }
+    }
+
+    /// "Remove another app…": pick any app. Vitals adds it — with the files it left in your Library —
+    /// to the list and selects it, so you review everything before anything moves.
+    func chooseAppToRemove() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.prompt = "Choose"
+        panel.message = "Pick an app to remove. Vitals finds the files it left behind; you review everything before it goes to the Trash."
+        NSApp.activate()
+        guard panel.runModal() == .OK, let app = panel.url else { return }
+        if let id = Bundle(url: app)?.bundleIdentifier, id.hasPrefix("com.apple.") || id == Bundle.main.bundleIdentifier {
+            message = "Vitals doesn't remove Apple's own apps, or itself."
+            return
+        }
+        scanning.insert(.unusedApps)
+        Task {
+            let item = await Task.detached(priority: .userInitiated) {
+                SpaceScanner.appItem(app, lastUsed: SpaceScanner.lastUsed(app), detail: "Chosen by you")
+            }.value
+            var list = items[.unusedApps] ?? []
+            list.removeAll { $0.id == item.id }
+            list.insert(item, at: 0)
+            items[.unusedApps] = list
+            selection.insert(item.id)
+            scanning.remove(.unusedApps)
         }
     }
 

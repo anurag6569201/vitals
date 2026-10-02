@@ -128,6 +128,7 @@ final class VitalsModel: ObservableObject {
         if detection != settings.detection { settings.detection = detection }
         if away.isTracking { away.ingest(snap) }
         updateBatteryPlanning(snap)
+        if let battery = snap.battery { BatteryHealthLog.shared.record(battery, now: snap.date) }
         space.backgroundRefreshIfDue(onAC: snap.battery?.isOnAC ?? true)
 
         network.sample(downRate: snap.downloadRate, upRate: snap.uploadRate, now: snap.date)

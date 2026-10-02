@@ -155,9 +155,12 @@ final class SystemSampler {
             let onAC = (description[kIOPSPowerSourceStateKey as String] as? String) == (kIOPSACPowerValue as String)
             var minutes = description[kIOPSTimeToEmptyKey as String] as? Int
             if let value = minutes, value <= 0 { minutes = nil }
+            var toFull = description[kIOPSTimeToFullChargeKey as String] as? Int
+            if let value = toFull, value <= 0 { toFull = nil }
             var state = BatteryState(level: min(max(Double(current) / Double(maximum), 0), 1),
                                      isCharging: charging, isOnAC: onAC, dischargeWatts: nil,
-                                     minutesRemaining: onAC ? nil : minutes, cycleCount: nil, health: nil)
+                                     minutesRemaining: onAC ? nil : minutes,
+                                     minutesToFull: charging ? toFull : nil, cycleCount: nil, health: nil)
             addSmartBatteryDetails(to: &state)
             return state
         }
@@ -173,9 +176,18 @@ final class SystemSampler {
                 .takeRetainedValue() as? NSNumber
         }
         if let cycles = number("CycleCount") { state.cycleCount = cycles.intValue }
-        if let raw = number("AppleRawMaxCapacity") ?? number("NominalChargeCapacity"),
-           let design = number("DesignCapacity"), design.doubleValue > 0 {
-            state.health = min(raw.doubleValue / design.doubleValue, 1.0)
+        // Some Macs only report capacities inside the "BatteryData" dictionary.
+        let batteryData = IORegistryEntryCreateCFProperty(service, "BatteryData" as CFString, kCFAllocatorDefault, 0)?
+            .takeRetainedValue() as? [String: Any]
+        func capacity(_ key: String) -> Double? {
+            let value = number(key)?.doubleValue ?? (batteryData?[key] as? NSNumber)?.doubleValue
+            return value.flatMap { $0 > 0 ? $0 : nil }
+        }
+        if state.cycleCount == nil, let cycles = batteryData?["CycleCount"] as? NSNumber { state.cycleCount = cycles.intValue }
+        if let raw = capacity("AppleRawMaxCapacity") ?? capacity("NominalChargeCapacity") ?? capacity("FccComp1"),
+           let design = capacity("DesignCapacity") {
+            let ratio = raw / design
+            if ratio > 0.2 && ratio < 1.5 { state.health = min(ratio, 1.0) }
         }
         if let amperage = number("InstantAmperage") ?? number("Amperage"), let voltage = number("Voltage") {
             let milliamps = Double(amperage.int64Value) // negative while discharging

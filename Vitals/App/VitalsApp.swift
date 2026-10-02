@@ -119,6 +119,7 @@ final class WindowManager {
     private var onboardingWindow: NSWindow?
     private var spaceWindow: NSWindow?
     private var networkWindow: NSWindow?
+    private var batteryWindow: NSWindow?
     private let settingsRouter = SettingsRouter()
 
     init(model: VitalsModel) {
@@ -144,6 +145,7 @@ final class WindowManager {
         case .settings(let tab): showSettings(tab: tab)
         case .space: showSpace()
         case .network: showNetwork()
+        case .battery: showBattery()
         }
     }
 
@@ -158,6 +160,18 @@ final class WindowManager {
             networkWindow = window
         }
         present(networkWindow)
+    }
+
+    func showBattery() {
+        if batteryWindow == nil {
+            let view = BatteryWindowView(model: model, log: BatteryHealthLog.shared)
+            let window = makeWindow(NSHostingController(rootView: view), title: "Battery")
+            window.styleMask.insert(.resizable)
+            window.setContentSize(NSSize(width: 620, height: 680))
+            window.center()
+            batteryWindow = window
+        }
+        present(batteryWindow)
     }
 
     func showSpace() {
@@ -211,6 +225,7 @@ enum AppWindow {
     case settings(SettingsTab)
     case space
     case network
+    case battery
 }
 
 enum SettingsTab: String, Hashable {

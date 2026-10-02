@@ -8,6 +8,8 @@ struct SpaceView: View {
     @ObservedObject var model: VitalsModel
     let upgrade: () -> Void
     @State private var category: SpaceCategory? = .bigFiles
+    @State private var showMap = false
+    @StateObject private var map = SpaceMapModel()
     @State private var confirming = false
 
     var body: some View {
@@ -41,7 +43,9 @@ struct SpaceView: View {
                     .background(Color(nsColor: .windowBackgroundColor))
                 Divider()
                 Group {
-                    if let category {
+                    if showMap {
+                        SpaceMapView(map: map)
+                    } else if let category {
                         CategoryDetail(category: category, space: space, isPro: license.isPro)
                     } else {
                         Text("Pick a category").foregroundStyle(.secondary)
@@ -81,8 +85,12 @@ struct SpaceView: View {
             Divider()
             ScrollView {
                 VStack(spacing: 2) {
+                    sidebarRow(title: "Space Map", symbol: "square.grid.3x3.square", selected: showMap) {
+                        showMap = true
+                    }
+                    Divider().padding(.vertical, 4)
                     ForEach(SpaceCategory.allCases) { item in
-                        Button { category = item } label: {
+                        Button { showMap = false; category = item } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: item.symbol).frame(width: 18)
                                 Text(item.title).lineLimit(1)
@@ -92,14 +100,14 @@ struct SpaceView: View {
                                 } else if space.total(item) > 0 {
                                     Text(Format.diskBytes(space.total(item)))
                                         .font(.caption.monospacedDigit())
-                                        .foregroundStyle(category == item ? Color.white.opacity(0.85) : Color.secondary)
+                                        .foregroundStyle(isSelected(item) ? Color.white.opacity(0.85) : Color.secondary)
                                 }
                             }
                             .font(.system(size: 13))
-                            .foregroundStyle(category == item ? Color.white : Color.primary)
+                            .foregroundStyle(isSelected(item) ? Color.white : Color.primary)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 7)
-                            .background(category == item ? Color.accentColor : Color.clear,
+                            .background(isSelected(item) ? Color.accentColor : Color.clear,
                                         in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                             .contentShape(Rectangle())
                         }
@@ -109,6 +117,26 @@ struct SpaceView: View {
                 .padding(8)
             }
         }
+    }
+
+    private func isSelected(_ item: SpaceCategory) -> Bool { !showMap && category == item }
+
+    private func sidebarRow(title: String, symbol: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: symbol).frame(width: 18)
+                Text(title).lineLimit(1)
+                Spacer()
+            }
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(selected ? Color.white : Color.primary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(selected ? Color.accentColor : Color.clear,
+                        in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private var bottomBar: some View {
@@ -184,6 +212,30 @@ private struct CategoryDetail: View {
                 }
             }
             .padding(16)
+
+            if category == .unusedApps {
+                VStack(alignment: .leading, spacing: 8) {
+                    if !space.canRemoveApps {
+                        HStack(spacing: 8) {
+                            Image(systemName: "lock.shield").foregroundStyle(.orange)
+                            Text("To move apps to the Trash, Vitals needs you to choose the Applications folder once.")
+                                .font(.callout).fixedSize(horizontal: false, vertical: true)
+                            Spacer()
+                            Button("Allow…") { space.allowRemovingApps() }
+                        }
+                        .padding(10)
+                        .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                    HStack {
+                        Button("Remove another app…") { space.chooseAppToRemove() }
+                            .buttonStyle(.link)
+                        Text("Any app, with the settings and caches it leaves behind.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                }
+                .padding(.horizontal, 16).padding(.bottom, 8)
+            }
 
             if category == .developer {
                 HStack {

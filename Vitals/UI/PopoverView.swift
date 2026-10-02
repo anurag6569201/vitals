@@ -47,6 +47,10 @@ struct PopoverView: View {
                     ToolsRow(space: model.space, openSpace: { model.openWindow?(.space) })
                         .vitalsAppear(11)
                 }
+                if show(.battery), let battery = snapshot.battery {
+                    BatteryRow(battery: battery, open: { model.openWindow?(.battery) })
+                        .vitalsAppear(11)
+                }
                 if show(.network) {
                     NetworkSection(tracker: model.network,
                                    hotspotLimitMB: model.settings.hotspotGuard ? model.settings.hotspotLimitMB : nil,
@@ -215,7 +219,11 @@ private struct HeaderView: View {
         if snap.thermal >= .fair { parts.append(snap.thermal.title) }
         if let battery = snap.battery {
             if battery.isOnAC {
-                parts.append(battery.isCharging ? "Charging" : "Plugged in")
+                if battery.isCharging, let minutes = battery.minutesToFull {
+                    parts.append("Full in \(Format.duration(TimeInterval(minutes * 60)))")
+                } else {
+                    parts.append(battery.isCharging ? "Charging" : "Plugged in")
+                }
             } else if let minutes = battery.minutesRemaining {
                 parts.append("\(Format.duration(TimeInterval(minutes * 60))) left")
             }
@@ -406,7 +414,12 @@ private struct VitalsGrid: View {
     }
 
     private func batteryCaption(_ battery: BatteryState) -> String {
-        if battery.isOnAC { return battery.isCharging ? "Charging" : "Plugged in" }
+        if battery.isOnAC {
+            if battery.isCharging, let minutes = battery.minutesToFull {
+                return "Full in \(Format.duration(TimeInterval(minutes * 60)))"
+            }
+            return battery.isCharging ? "Charging" : "Plugged in"
+        }
         if let watts = battery.dischargeWatts { return "Using \(Format.watts(watts))" }
         if let minutes = battery.minutesRemaining { return "\(Format.duration(TimeInterval(minutes * 60))) left" }
         return "On battery"

@@ -333,6 +333,7 @@ struct PinReading {
             let symbol = b.isCharging ? "bolt.fill" : (b.isOnAC ? "powerplug.fill" : "battery.75percent")
             var detail: String?
             if !b.isOnAC, let m = b.minutesRemaining { detail = Format.duration(TimeInterval(m * 60)) }
+            else if b.isCharging, let m = b.minutesToFull { detail = "full in \(Format.duration(TimeInterval(m * 60)))" }
             return PinReading(value: Format.percent(b.level), detail: detail, fraction: b.level,
                               alert: low ? (b.level < 0.1 ? .critical : .warn) : nil, symbol: symbol)
         case .disk:

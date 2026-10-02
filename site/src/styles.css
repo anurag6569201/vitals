@@ -344,7 +344,9 @@ legend { font: 600 13px var(--body); margin-bottom: 10px; display: flex; gap: 8p
 .hotspot p b { color: var(--ink); }
 
 /* ---------- Battery ---------- */
-.bat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.bat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.spark { width: 100%; height: 48px; color: var(--calm); }
+.lpm { font-size: 13.5px; color: var(--muted); }
 .bat-card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; display: grid; gap: 10px; align-content: start; }
 .bat-card h3 { font-size: 22px; }
 .bat-line { height: 10px; border-radius: 5px; background: var(--panel-2); overflow: hidden; margin-top: 6px; }

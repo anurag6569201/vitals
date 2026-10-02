@@ -44,7 +44,7 @@ enum IconStyle: String, Codable, CaseIterable, Identifiable {
 }
 
 enum PopoverSection: String, Codable, CaseIterable, Identifiable {
-    case menuBarItems, batteryPlanner, vitals, freeUpSpace, network, topApps
+    case menuBarItems, batteryPlanner, vitals, freeUpSpace, battery, network, topApps
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -52,6 +52,7 @@ enum PopoverSection: String, Codable, CaseIterable, Identifiable {
         case .batteryPlanner: "Battery forecast"
         case .vitals: "Live readings grid"
         case .freeUpSpace: "Free up space"
+        case .battery: "Battery health"
         case .network: "Where your data went"
         case .topApps: "Apps using your Mac"
         }

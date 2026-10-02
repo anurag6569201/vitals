@@ -78,12 +78,14 @@ export function FreeUpSpace() {
         <div>
           <SecHead kicker="Free Up Space" title="Disk full? See exactly what to clear.">
             Free Up Space scans your home folder on your Mac and sorts what it finds into plain groups, biggest first.
-            Every item is explained. Nothing is pre-selected and nothing is deleted for you — what you pick goes to the
+            Every item is explained. Your own files are never pre-selected and nothing is deleted for you — what you pick goes to the
             Trash, where you can still put it back.
           </SecHead>
           <ul className="checks">
             <li><Check /><span><b>Scan free.</b> See every gigabyte you could get back before paying anything.</span></li>
             <li><Check /><span><b>Clear in one click with Pro.</b> Or clear by hand in Finder — your call.</span></li>
+            <li><Check /><span><b>Space Map.</b> A picture of what fills your home folder. Click any block to look inside.</span></li>
+            <li><Check /><span><b>Remove apps completely.</b> Vitals finds the settings, caches and data an app leaves in your Library and clears them with it.</span></li>
             <li><Check /><span><b>No scare tactics.</b> No “junk detected!” banners, no subscription.</span></li>
           </ul>
         </div>
@@ -248,6 +250,16 @@ export function BatterySection() {
         </div>
 
         <div className="bat-card">
+          <div className="cap">Battery health <span className="free">FREE</span></div>
+          <h3>86% · 668 cycles</h3>
+          <svg className="spark" viewBox="0 0 200 48" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 6 L30 7 L60 9 L90 10 L120 13 L150 15 L180 17 L200 18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1="0" y1="42" x2="200" y2="42" stroke="var(--lamp)" strokeDasharray="4 3" strokeWidth="1" />
+          </svg>
+          <p className="muted small">Vitals saves one reading a day, so you can see how your battery ages over months — and when it nears the 80% service mark.</p>
+        </div>
+
+        <div className="bat-card">
           <div className="cap">Will my battery last? <span className="pro">PRO</span></div>
           <label className="planner">
             <span>I need it until</span>
@@ -257,7 +269,10 @@ export function BatterySection() {
           {spare >= 0 ? (
             <p className="verdict ok"><Check size={16} /> You’ll make it, with about {spareText} to spare.</p>
           ) : (
-            <p className="verdict bad"><Bolt /> Not at this rate. Plug in by {fmtTime(empty)}.</p>
+            <>
+              <p className="verdict bad"><Bolt /> Not at this rate. Plug in by {fmtTime(empty)}.</p>
+              <p className="lpm">🍃 Low Power Mode would stretch it to about {fmtTime(now + 71 / (rate * 0.8))}.</p>
+            </>
           )}
         </div>
 

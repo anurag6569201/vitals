@@ -43,7 +43,46 @@ struct BatteryPlannerCard: View {
 
     @ViewBuilder
     private var planView: some View {
-        switch forecast.plan(until: target) {
+        let plan = forecast.plan(until: target)
+        let fine: Bool = { if case .fine = plan { return true }; return false }()
+        planMessage(plan)
+        if !fine { lowPowerHint(plan) }
+    }
+
+    /// TurtleBar-style nudge: would Low Power Mode get you there? Vitals can't switch it on for you
+    /// (that needs an administrator), so it opens Battery settings.
+    @ViewBuilder
+    private func lowPowerHint(_ plan: BatteryForecast.Plan) -> some View {
+        if ProcessInfo.processInfo.isLowPowerModeEnabled {
+            Label("Low Power Mode is already on.", systemImage: "leaf.fill")
+                .font(.caption).foregroundStyle(.secondary)
+        } else if case .quit = plan {
+            // Quitting already works; offer Low Power Mode as the alternative if it would do on its own.
+            let reach = forecast.emptyAtWithLowPower()
+            if reach >= target {
+                lowPowerRow("Or keep your apps open and turn on Low Power Mode instead (about \(reach.formatted(date: .omitted, time: .shortened))).")
+            }
+        } else {
+            let reach = forecast.emptyAtWithLowPower(quitting: forecast.savers)
+            lowPowerRow(reach >= target
+                        ? "\(forecast.savers.isEmpty ? "Low Power Mode" : "Quitting them and turning on Low Power Mode") should get you there (about \(reach.formatted(date: .omitted, time: .shortened)))."
+                        : "Low Power Mode would stretch it to about \(reach.formatted(date: .omitted, time: .shortened)).")
+        }
+    }
+
+    private func lowPowerRow(_ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: "leaf").foregroundStyle(.green)
+            Text(text).font(.caption).fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 4)
+            Button("Battery Settings") { SystemActions.openBatterySettings() }
+                .buttonStyle(.link).font(.caption)
+        }
+    }
+
+    @ViewBuilder
+    private func planMessage(_ plan: BatteryForecast.Plan) -> some View {
+        switch plan {
         case .fine(let spare):
             Label("You'll make it, with about \(Format.duration(spare)) to spare.", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green).font(.callout)
@@ -59,7 +98,9 @@ struct BatteryPlannerCard: View {
                 .buttonStyle(.borderedProminent).tint(.orange).controlSize(.small)
             }
         case .plugIn(let by):
-            Label("Even quitting the big apps won't get you there. Plug in by \(by.formatted(date: .omitted, time: .shortened)).",
+            Label(forecast.savers.isEmpty
+                  ? "Not at this rate. Plug in by \(by.formatted(date: .omitted, time: .shortened))."
+                  : "Even quitting the big apps won't get you there. Plug in by \(by.formatted(date: .omitted, time: .shortened)).",
                   systemImage: "powerplug.fill")
                 .foregroundStyle(.red).font(.callout)
                 .fixedSize(horizontal: false, vertical: true)

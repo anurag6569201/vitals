@@ -23,6 +23,17 @@ struct BatteryForecast: Equatable {
 
     var emptyAt: Date { now.addingTimeInterval(level * 100 / ratePerHour * 3600) }
 
+    /// Low Power Mode dims the screen a little and limits boost and background work. A conservative
+    /// estimate is that it trims about a fifth of the drain; Vitals always says "about".
+    static let lowPowerSaving = 0.2
+
+    /// Roughly when the battery would run out with Low Power Mode on (and the given apps quit).
+    func emptyAtWithLowPower(quitting quit: [Saver] = []) -> Date {
+        let share = min(quit.reduce(0) { $0 + $1.share }, 1)
+        let rate = max(ratePerHour * (1 - Self.appPortion * share) * (1 - Self.lowPowerSaving), Self.floorRate)
+        return now.addingTimeInterval(level * 100 / rate * 3600)
+    }
+
     func emptyAt(quitting quit: [Saver]) -> Date {
         let share = min(quit.reduce(0) { $0 + $1.share }, 1)
         let rate = max(ratePerHour * (1 - Self.appPortion * share), Self.floorRate)

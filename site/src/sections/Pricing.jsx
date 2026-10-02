@@ -34,7 +34,9 @@ const MATRIX = [
   ['Hotspot data guard', true, true],
   ['Battery “lasts until…” forecast', true, true],
   ['Shortcuts actions, Keep Awake, global shortcut', true, true],
-  ['Free Up Space', 'Scan', 'Scan + one-click clear'],
+  ['Free Up Space and Space Map', 'Scan and explore', 'Scan + one-click clear'],
+  ['Remove apps with their leftover files', 'Find', 'One click'],
+  ['Battery health history and charging time', true, true],
   ['Where your data went', 'Today', '7 and 30 days'],
   ['While you were away', 'Headline', 'Full report'],
   ['On Screen pin', 'One reading, Edge Dock', 'Every shape, theme & preset'],
@@ -64,7 +66,8 @@ export function Pricing() {
             <li>Health light in your menu bar, with the reason when something’s wrong</li>
             <li>Heat, memory, low-disk and restart alerts as Mac notifications</li>
             <li>Battery forecast and hotspot data guard</li>
-            <li>Free Up Space scan</li>
+            <li>Free Up Space scan and Space Map</li>
+            <li>Battery health history</li>
             <li>Today’s data usage</li>
             <li>One live reading pinned to the edge of your screen</li>
             <li>Shortcuts, Keep Awake and a global shortcut</li>
@@ -82,8 +85,8 @@ export function Pricing() {
             <li>Live readings in the menu bar with icons and colors</li>
             <li>Pin any readings anywhere — six shapes, nine themes, presets</li>
             <li>Refresh rate, ping, Wi‑Fi signal, disk activity, power draw, battery health</li>
-            <li>Fast-drain alerts and “Will my battery last?”</li>
-            <li>One-click clearing in Free Up Space</li>
+            <li>Fast-drain alerts and “Will my battery last?” with Low Power Mode advice</li>
+            <li>One-click clearing in Free Up Space, and complete app removal</li>
             <li>7- and 30-day data history, full “While you were away”</li>
             <li>Works on every Mac signed in to your Apple Account</li>
           </ul>

@@ -158,6 +158,8 @@ struct BatteryState: Hashable {
     /// Positive while discharging, in watts. Nil if the battery doesn't report it.
     var dischargeWatts: Double?
     var minutesRemaining: Int?
+    /// While charging: minutes until full, when macOS has an estimate.
+    var minutesToFull: Int?
     var cycleCount: Int?
     /// 0...1 of design capacity.
     var health: Double?
