@@ -24,12 +24,12 @@ MacBook owners who aren't hardware nerds — students, creators, developers, off
 
 ## Pricing
 - Free forever: health light, runaway-app, heat, memory, disk alerts, live dashboard, and a full Free Up Space scan.
-- **Vitals Pro — $5.99 once, complete access** (App Store and direct, same price): live menu-bar readings with
+- **Vitals Pro — $9.99 once, complete access** (App Store and direct, same price): live menu-bar readings with
   icons and colors, "Will my battery last?" planner, fast-drain alerts, one-click clearing in Free Up Space,
   7- and 30-day "Where your data went", the on-screen pin, full "While you were away" reports; the direct version adds icon hiding,
-  per-app battery culprits, apps keeping your Mac awake and one-click Quit. 14-day free trial, no account.
-- Why $5.99: an impulse price for a small utility, below every competitor that charges, and easy to say yes to
-  after the trial. Revisit after the first 500 sales.
+  per-app battery culprits, apps keeping your Mac awake and one-click Quit. 7-day free trial, no account.
+- Why $9.99: still well below iStat Menus and similar tools, one payment instead of a subscription, and it now
+  covers the pin, network history and hotspot guard. A 7-day trial is long enough to see the pin and alerts earn their keep. Revisit after the first 500 sales.
 - The free scan showing "38 GB found" is the upgrade moment: the value is visible before the paywall.
 
 ## Website hero
@@ -53,7 +53,7 @@ MacBook owners who aren't hardware nerds — students, creators, developers, off
 color when there's a real problem — a runaway app, heat throttling, memory swapping, fast battery drain, an app
 keeping your Mac awake overnight, a nearly full disk. It explains the problem in plain English and gives you a
 one-click fix. After you unlock your Mac it can tell you what happened while you were away ("lost 23% — Zoom kept
-it awake"). Free, Pro is a one-time $5.99 (no subscription), nothing leaves your Mac. Feedback very welcome!
+it awake"). Free, Pro is a one-time $9.99 (no subscription), nothing leaves your Mac. Feedback very welcome!
 
 ## SEO articles for the site (each ends with "Vitals catches this automatically")
 0. "Your disk is almost full" on Mac — what's actually taking the space (and what's safe to delete)

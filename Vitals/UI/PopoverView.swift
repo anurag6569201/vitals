@@ -48,7 +48,9 @@ struct PopoverView: View {
                         .vitalsAppear(11)
                 }
                 if show(.network) {
-                    NetworkSection(tracker: model.network, isPro: license.isPro,
+                    NetworkSection(tracker: model.network,
+                                   hotspotLimitMB: model.settings.hotspotGuard ? model.settings.hotspotLimitMB : nil,
+                                   isPro: license.isPro,
                                    upgrade: { openSettings(.pro) },
                                    openDetails: { model.openWindow?(.network) })
                         .vitalsAppear(12)
@@ -170,34 +172,27 @@ private struct HeaderView: View {
         }
     }
 
-    @ViewBuilder private var pinButton: some View {
+    private var pinButton: some View {
         let pin = model.settings.pin
-        let on = pin.enabled && isPro
-        if isPro {
-            Menu {
-                Button(on ? "Unpin from Screen" : "Pin to Screen") { model.settings.pin.enabled.toggle() }
-                if on {
-                    Toggle("Lock in Place", isOn: $model.settings.pin.locked)
-                }
-                Divider()
-                Button("Customize…") { openSettings(.pin) }
-            } label: {
-                Image(systemName: on ? (pin.locked ? "pin.circle.fill" : "pin.fill") : "pin")
-                    .foregroundStyle(on ? Color.accentColor : Color.secondary)
-            } primaryAction: {
-                model.settings.pin.enabled.toggle()
+        let on = pin.enabled
+        return Menu {
+            Button(on ? "Unpin from Screen" : "Pin to Screen") { model.settings.pin.enabled.toggle() }
+            if on {
+                Toggle("Lock in Place", isOn: $model.settings.pin.locked)
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .help(on ? "Unpin from your screen (hold for options)" : "Pin live readings to your screen")
-        } else {
-            Button { openSettings(.pin) } label: {
-                Image(systemName: "pin").foregroundStyle(.secondary)
-            }
-            .buttonStyle(.borderless)
-            .help("Pin live readings to your screen (Pro)")
+            Divider()
+            Button("Customize…") { openSettings(.pin) }
+        } label: {
+            Image(systemName: on ? (pin.locked ? "pin.circle.fill" : "pin.fill") : "pin")
+                .foregroundStyle(on ? Color.accentColor : Color.secondary)
+                .contentTransition(.symbolEffect(.replace))
+        } primaryAction: {
+            model.settings.pin.enabled.toggle()
         }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(on ? "Unpin from your screen (hold for options)" : "Pin live readings to your screen")
     }
 
     private var title: String {

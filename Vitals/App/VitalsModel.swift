@@ -7,6 +7,8 @@ import UserNotifications
 /// and performs the actions people pick.
 @MainActor
 final class VitalsModel: ObservableObject {
+    /// For Shortcuts / App Intents, which run inside the app.
+    static weak var shared: VitalsModel?
     @Published private(set) var snapshot: SystemSnapshot?
     @Published private(set) var issues: [Issue] = []
     @Published private(set) var lockedIssues: [Issue] = []
@@ -33,6 +35,7 @@ final class VitalsModel: ObservableObject {
     let updates = UpdateChecker()
     let space = SpaceModel()
     let network = NetworkUsageTracker()
+    let extra = ExtraStats()
     let keepAwake = KeepAwake()
     let hotKey = HotKey()
     var openWindow: ((AppWindow) -> Void)?
@@ -69,6 +72,7 @@ final class VitalsModel: ObservableObject {
                 Task { @MainActor in self?.tick() }
             }
             .store(in: &cancellables)
+        VitalsModel.shared = self
     }
 
     var latestReport: AwayReport? {
@@ -107,7 +111,7 @@ final class VitalsModel: ObservableObject {
     private func schedule() {
         timer?.invalidate()
         // The on-screen pin shows live numbers, so it refreshes faster while you're at the Mac.
-        let pinVisible = settings.pin.enabled && license.isPro
+        let pinVisible = settings.pin.enabled
         let interval: TimeInterval = isPopoverOpen ? 2 : (presence.isAway ? 10 : (pinVisible ? 2.5 : 5))
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
@@ -127,6 +131,8 @@ final class VitalsModel: ObservableObject {
         space.backgroundRefreshIfDue(onAC: snap.battery?.isOnAC ?? true)
 
         network.sample(downRate: snap.downloadRate, upRate: snap.uploadRate, now: snap.date)
+        sampleExtras(snap)
+        checkHotspot()
         snapshot = snap
         publishIssues()
         notify(newlyVisible: newlyVisible)
@@ -168,6 +174,38 @@ final class VitalsModel: ObservableObject {
     }
 
     func popoverWillOpen() { popoverEpoch += 1 }
+
+    /// 0 = nothing sent, 1 = warned at 80%, 2 = warned at the limit.
+    private var hotspotAlertLevel = 0
+
+    private func checkHotspot() {
+        guard settings.hotspotGuard, network.onMeteredConnection else {
+            hotspotAlertLevel = 0
+            return
+        }
+        let limit = Double(settings.hotspotLimitMB) * 1_000_000
+        let used = network.meteredBytes
+        let level = used >= limit ? 2 : (used >= limit * 0.8 ? 1 : 0)
+        guard level > hotspotAlertLevel else { return }
+        hotspotAlertLevel = level
+        guard settings.notificationsEnabled else { return }
+        let usedText = Format.bytes(UInt64(used)), limitText = Format.bytes(UInt64(limit))
+        Notifier.shared.post(
+            id: "hotspot",
+            title: level == 2 ? "Hotspot limit reached: \(usedText) used" : "\(usedText) of \(limitText) used on your hotspot",
+            body: "Pause big downloads, cloud sync and updates to save mobile data. Change the limit in Vitals › Settings › Alerts.")
+    }
+
+    /// Extra readings are sampled only while something shows them; ping only when it's chosen
+    /// (it's the one reading that sends anything).
+    private func sampleExtras(_ snap: SystemSnapshot) {
+        let pinItems = settings.pin.enabled ? Set(settings.pin.items) : []
+        let barKinds = settings.menuBarStyle.showsReadings && license.isPro ? Set(settings.readings) : []
+        let extrasShown = !pinItems.isDisjoint(with: [.wifi, .ping, .display, .diskIO])
+            || !barKinds.isDisjoint(with: [.wifi, .ping, .display]) || isPopoverOpen
+        extra.pingEnabled = pinItems.contains(.ping) || barKinds.contains(.ping)
+        if extrasShown { extra.sample(now: snap.date) }
+    }
 
     func startKeepAwake(_ duration: TimeInterval?) {
         keepAwake.start(for: duration, allowDisplaySleep: settings.keepAwakeAllowsDisplaySleep)

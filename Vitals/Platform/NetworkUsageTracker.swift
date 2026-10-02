@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import Foundation
+import Network
 
 /// "Where your data went": how much this Mac downloaded and uploaded, hour by hour, split by
 /// connection (Wi‑Fi, wired, VPN), and — in the direct edition — by app.
@@ -81,6 +82,11 @@ final class NetworkUsageTracker: ObservableObject {
     @Published private(set) var vpnActive = false
     /// Per app, since each app opened (direct edition). Also available immediately.
     @Published private(set) var appsSinceOpened: [AppEntry] = []
+    /// On a connection macOS marks as costly: iPhone Personal Hotspot, tethering, Low Data Mode.
+    @Published private(set) var onMeteredConnection = false
+    /// Bytes used since joining the current metered connection.
+    @Published private(set) var meteredBytes: Double = 0
+    private let pathMonitor = NWPathMonitor()
 
     /// The sandboxed App Store build can't see other apps' traffic.
     static var perAppAvailable: Bool { !Edition.isAppStore }
@@ -99,6 +105,17 @@ final class NetworkUsageTracker: ObservableObject {
     init() {
         load()
         wifiNames = Self.findWiFiInterfaces()
+        pathMonitor.pathUpdateHandler = { [weak self] path in
+            let metered = path.status == .satisfied && (path.isExpensive || path.isConstrained)
+            DispatchQueue.main.async { MainActor.assumeIsolated { self?.setMetered(metered) } }
+        }
+        pathMonitor.start(queue: .global(qos: .utility))
+    }
+
+    private func setMetered(_ metered: Bool) {
+        guard metered != onMeteredConnection else { return }
+        onMeteredConnection = metered
+        if metered { meteredBytes = 0 }   // a fresh count for each hotspot session
     }
 
     // MARK: Sampling
@@ -130,6 +147,7 @@ final class NetworkUsageTracker: ObservableObject {
             if kind != .vpn {
                 bucket.down += down
                 bucket.up += up
+                if onMeteredConnection { meteredBytes += down + up }
             }
             bucket.byConnection[kind.rawValue, default: 0] += down + up
             changed = true

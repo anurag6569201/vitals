@@ -202,6 +202,9 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         case .disk: snap.diskFreeBytes.map { Format.diskBytes($0) }
         case .topApp: snap.apps.first.map { Format.cpu($0.cpuPercent) }
         case .worldClock: "\(WorldClock.label(for: model.settings.worldClockZone)) \(WorldClock.time(in: model.settings.worldClockZone))"
+        case .display: model.extra.refreshHz.map { "\($0) Hz" }
+        case .ping: model.extra.pingMs.map { "\(Int($0.rounded())) ms" }
+        case .wifi: model.extra.wifiRSSI.map { "\($0) dBm" }
         }
     }
 
@@ -216,6 +219,9 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         case .disk: (snap.diskFreeBytes ?? .max) < 10_000_000_000
         case .topApp: (snap.apps.first?.cpuPercent ?? 0) >= 80
         case .worldClock: true
+        case .display: false
+        case .ping: false
+        case .wifi: false
         }
     }
 

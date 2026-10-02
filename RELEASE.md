@@ -15,8 +15,8 @@ Things marked **you** need your accounts, money or identity; everything else is 
       xcrun notarytool store-credentials vitals-notary --apple-id <you> --team-id X5H55SY52K --password <app-specific-password>
       ```
 - [ ] **you** — Lemon Squeezy store (merchant of record: handles VAT/GST, pays out to you). Confirm payouts work for your country.
-      Create product **Vitals Pro**, price **$5.99** (single payment), enable **License keys**,
-      activation limit 3. Copy the checkout link.
+      Create product **Vitals Pro**, price **$9.99** (single payment), enable **License keys**,
+      activation limit **1** (one key, one Mac — same rule as App Store keys). Copy the checkout link.
 - [ ] Put the checkout link (and optionally your store id) in `Vitals/Licensing/LicenseManager.swift` → `LicenseConfig`.
 
 ## 2. Website + downloads
@@ -75,8 +75,8 @@ contains no private-framework code.
 
 ### App Store submission checklist
 1. App Store Connect › Vitals › **In-App Purchases** › create two **Non-Consumable** items:
-   - `com.anuragsingh.vitals.pro` — "Vitals Pro", price **$5.99** (App Store Connect › Pricing: USD 5.99; let Apple set other countries).
-   - `com.anuragsingh.vitals.trial` — reference name and display name **"14-day Trial"** (Apple requires
+   - `com.anuragsingh.vitals.pro` — "Vitals Pro", price **$9.99** (App Store Connect › Pricing: USD 9.99; let Apple set other countries).
+   - `com.anuragsingh.vitals.trial` — reference name and display name **"7-day Trial"** (Apple requires
      the "XX-day Trial" naming), price **Free**. (Guideline 3.1.1: time-limited trials of non-subscription
      apps must use a $0 item, and the app must state the length, what locks afterwards and the price
      before the trial starts. Settings › Pro shows this under the trial button.)
@@ -92,23 +92,58 @@ contains no private-framework code.
 8. Review notes (paste as is):
    "Vitals is a menu-bar utility (no Dock icon). After the welcome window, click the pulse icon in the menu bar to open it.
    Permissions, each asked only after the user acts:
+   • Network (outgoing connections): used only by the optional "Ping" reading, which times a TCP connection to captive.apple.com. Off unless the user adds Ping to the pin or menu bar. Hotspot detection uses NWPathMonitor (no traffic).
    • Notifications: requested when the user leaves 'Notify me about real problems' ticked on the welcome screen, or turns it on in Settings. Health alerts are delivered as local notifications (no push, no server). Notifications never advertise Pro (guideline 4.5.4): Pro teasers appear only inside the app's own menu.
    • Open at login: off by default; the user can turn it on in the welcome screen or Settings (SMAppService).
    • Files: Free Up Space explains what it does, then shows the standard folder picker so the user can choose their home folder
      (user-selected read-write + security-scoped bookmark). Files are only moved to the Trash when the user selects them and confirms.
    No data leaves the Mac. No account, no analytics.
-   In-app purchases: '14-day Trial' ($0 non-consumable) starts a trial of all Pro features; 'Vitals Pro' ($5.99 non-consumable) unlocks them permanently.
+   In-app purchases: '7-day Trial' ($0 non-consumable) starts a trial of all Pro features; 'Vitals Pro' ($9.99 non-consumable) unlocks them permanently.
    Both are in Settings › Pro, with Restore Purchase."
+
+## Licenses across editions (App Store purchase → key for the direct build)
+
+**Rule:** buy once in the Mac App Store → Pro on every Mac with that Apple Account (Apple handles it) **plus one
+license key** that unlocks the direct-download build on **one Mac at a time**. Refunds revoke the key automatically.
+
+How it works (code: `site/api/`, `Vitals/Licensing/LicenseManager.swift`):
+1. App Store build › Settings › Pro › **Show My License Key** sends the StoreKit 2 transaction (`jwsRepresentation`,
+   signed by Apple) to `POST /api/license/claim`. The server verifies the x5c chain up to Apple Root CA G3 (pinned by
+   SHA-256), the ES256 signature, bundle id and product id, then stores `claim:<originalTransactionId> → key`
+   (one key per purchase; asking again returns the same key).
+2. Direct build › Settings › Pro › paste key → `POST /api/license/activate {key, machine}`. `machine` = SHA-256 of the
+   Mac's hardware UUID + salt (the real id never leaves the Mac). Max 1 machine per key; a 2nd Mac gets a clear
+   "remove it on the other Mac first" message. The server returns an Ed25519-signed token the app verifies offline.
+3. Every 14 days the direct build calls `/api/license/validate`; only an explicit "invalid" removes Pro (offline is fine).
+4. `/api/apple/notifications` (App Store Server Notifications V2) marks keys revoked on REFUND/REVOKE, and re-enables
+   them on REFUND_REVERSED.
+
+**Set-up (once, ~15 minutes) — you:**
+1. Vercel › your site project › Storage › create a **KV / Upstash Redis** database and connect it (adds
+   `KV_REST_API_URL` and `KV_REST_API_TOKEN`).
+2. `node scripts/license-keys.js` → add `LICENSE_SIGNING_KEY` in Vercel › Settings › Environment Variables; paste the
+   printed public key into `LicenseConfig.licensePublicKey`. Never commit the private key.
+3. Set `LicenseConfig.licenseServer` to `https://<your-domain>/api` and redeploy `site/`.
+4. App Store Connect › App Information › **App Store Server Notifications** › Production and Sandbox URL:
+   `https://<your-domain>/api/apple/notifications`, Version 2.
+5. Test: sandbox-buy Pro in the App Store build → Show My License Key → paste into the direct build on another Mac.
+
+**App Review notes for this:** the key is part of what the user bought in the App Store (allowed under 3.1.3(b),
+multiplatform). The App Store build never links to or mentions buying anywhere else, and shows the key only after
+purchase.
+
+**App Privacy (App Store Connect):** declare **Purchases › Purchase History** — used for App Functionality, not linked
+to identity, not used for tracking. Sent only when the user taps "Show My License Key".
 
 ## Pricing (single source of truth)
 
 | | App Store | Direct (Lemon Squeezy) |
 |---|---|---|
 | Download | Free | Free |
-| Trial | 14 days, starts with the $0 `com.anuragsingh.vitals.trial` item | 14 days, starts on first launch |
-| Vitals Pro | **$5.99 once** — non-consumable `com.anuragsingh.vitals.pro` | **$5.99 once** — license key, 3 Macs |
+| Trial | 7 days, starts with the $0 `com.anuragsingh.vitals.trial` item | 7 days, starts on first launch |
+| Vitals Pro | **$9.99 once** — non-consumable `com.anuragsingh.vitals.pro` | **$9.99 once** — license key, 1 Mac |
 | You receive (approx.) | ~$5.09 (Small Business Program, 15%) | ~$5.19 (5% + $0.50 fee) |
 
 - Enrol in the App Store **Small Business Program** (App Store Connect › Agreements) for 15% instead of 30%.
-- In the app: `LicenseConfig.displayPrice` = "$5.99" (fallback text); the App Store shows its localized price.
+- In the app: `LicenseConfig.displayPrice` = "$9.99" (fallback text); the App Store shows its localized price.
 - After the trial the app keeps working with the free features; Pro features show a PRO badge and the upgrade button.

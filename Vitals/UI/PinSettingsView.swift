@@ -9,21 +9,48 @@ struct PinSettingsView: View {
 
     private var pin: Binding<PinSettings> { $model.settings.pin }
 
+    private var lockBadge: some View {
+        Image(systemName: "lock.fill")
+            .font(.system(size: 8, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(4)
+            .background(Color.black.opacity(0.55), in: Circle())
+            .padding(5)
+    }
+
     var body: some View {
         Form {
             Section {
-                PinStage(model: model, pin: pin)
+                PinStage(model: model, pin: pin, isPro: isPro)
                     .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
-                Toggle(isOn: Binding(
-                    get: { pin.wrappedValue.enabled && isPro },
-                    set: { on in if isPro { pin.wrappedValue.enabled = on } else { upgrade() } })) {
+                Toggle(isOn: pin.enabled) {
+                    Text("Pin Vitals to your screen").font(.headline)
+                }
+                if !isPro {
                     HStack(spacing: 6) {
-                        Text("Pin Vitals to your screen").font(.headline)
-                        if !isPro { ProBadge() }
+                        Text("Free: one reading in the Edge Dock. Pro unlocks every reading, shape and theme.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Unlock", action: upgrade).controlSize(.small)
                     }
                 }
                 Text("Drag it anywhere — it snaps to edges and corners, and turns into a column on the left or right edge. Right-click it for quick options; double-click opens Vitals. Click a spot in the preview to move it there.")
                     .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section("Start from a preset") {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 8)], spacing: 8) {
+                    ForEach(PinPreset.allCases) { preset in
+                        PinPresetButton(preset: preset, locked: preset.isPro && !isPro) {
+                            if preset.isPro && !isPro { upgrade(); return }
+                            var updated = pin.wrappedValue
+                            preset.apply(to: &updated)
+                            updated.enabled = true
+                            pin.wrappedValue = updated
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
             }
 
             Section("Shape") {
@@ -31,8 +58,9 @@ struct PinSettingsView: View {
                     ForEach(PinShape.allCases) { shape in
                         PinShapeTile(model: model, pin: pin.wrappedValue, shape: shape,
                                      selected: pin.wrappedValue.shape == shape) {
-                            pin.wrappedValue.shape = shape
+                            if shape != .dock && !isPro { upgrade() } else { pin.wrappedValue.shape = shape }
                         }
+                        .overlay(alignment: .topTrailing) { if shape != .dock && !isPro { lockBadge } }
                     }
                 }
                 .padding(.vertical, 2)
@@ -42,15 +70,28 @@ struct PinSettingsView: View {
                 }
             }
 
-            Section("Show") {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 118), spacing: 8)], spacing: 8) {
-                    ForEach(PinItem.allCases) { item in
-                        PinChip(item: item, selected: pin.wrappedValue.items.contains(item)) {
-                            model.togglePinItem(item)
+            Section {
+                ForEach(PinItem.Group.allCases, id: \.self) { group in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(group.rawValue.uppercased())
+                            .font(.system(size: 9.5, weight: .bold)).tracking(0.6).foregroundStyle(.secondary)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 8)], spacing: 8) {
+                            ForEach(PinItem.allCases.filter { $0.group == group }) { item in
+                                PinChip(item: item, selected: pin.wrappedValue.items.contains(item)) {
+                                    if isPro { model.togglePinItem(item) } else { pin.wrappedValue.items = [item] }
+                                }
+                            }
                         }
                     }
+                    .padding(.vertical, 2)
                 }
-                .padding(.vertical, 2)
+                if pin.wrappedValue.items.contains(.ping) {
+                    Label("Ping times a connection to Apple's connectivity check (captive.apple.com) every few seconds. No data about you is sent.",
+                          systemImage: "info.circle")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            } header: {
+                Text(isPro ? "Show" : "Show (free: pick one)")
             }
 
             Section("Look") {
@@ -58,8 +99,9 @@ struct PinSettingsView: View {
                     ForEach(PinTheme.allCases) { theme in
                         PinThemeTile(theme: theme, colorHex: pin.wrappedValue.colorHex,
                                      selected: pin.wrappedValue.theme == theme) {
-                            pin.wrappedValue.theme = theme
+                            if theme != .auto && !isPro { upgrade() } else { pin.wrappedValue.theme = theme }
                         }
+                        .overlay(alignment: .topTrailing) { if theme != .auto && !isPro { lockBadge } }
                     }
                 }
                 .padding(.vertical, 2)
@@ -123,6 +165,7 @@ struct PinSettingsView: View {
 private struct PinStage: View {
     @ObservedObject var model: VitalsModel
     @Binding var pin: PinSettings
+    var isPro = true
     @State private var hoverZone: Int?
 
     var body: some View {
@@ -144,7 +187,7 @@ private struct PinStage: View {
                 .background(.black.opacity(0.18))
                 Spacer()
             }
-            PinnedVitalsView(model: model, pin: pin, interactive: false)
+            PinnedVitalsView(model: model, pin: isPro ? pin : pin.freeTier(), interactive: false)
                 .fixedSize()
                 .scaleEffect(0.62, anchor: anchor)
                 .padding(.top, 22)
@@ -238,6 +281,38 @@ private struct PinStage: View {
 }
 
 // MARK: - Pieces
+
+private struct PinPresetButton: View {
+    let preset: PinPreset
+    let locked: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 9) {
+                Image(systemName: preset.symbol)
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(width: 28, height: 28)
+                    .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .foregroundStyle(Color.accentColor)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 4) {
+                        Text(preset.title).font(.system(size: 12, weight: .semibold))
+                        if locked { Image(systemName: "lock.fill").font(.system(size: 8)).foregroundStyle(.secondary) }
+                    }
+                    Text(preset.subtitle).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(2)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(7)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.primary.opacity(0.04)))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.primary.opacity(0.08)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle(hoverFill: false))
+        .hoverLift(1.02)
+    }
+}
 
 private struct PinChip: View {
     let item: PinItem

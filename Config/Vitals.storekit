@@ -1,0 +1,49 @@
+{
+  "identifier" : "5A1C9E2B",
+  "nonRenewingSubscriptions" : [ ],
+  "products" : [
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "6730000001",
+      "localizations" : [
+        {
+          "description" : "Every Vitals Pro feature, forever. One payment, no subscription.",
+          "displayName" : "Vitals Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.anuragsingh.vitals.pro",
+      "referenceName" : "Vitals Pro",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "0.0",
+      "familyShareable" : false,
+      "internalID" : "6730000002",
+      "localizations" : [
+        {
+          "description" : "Try every Pro feature free for 7 days. No payment, never charged automatically.",
+          "displayName" : "7-day Trial",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.anuragsingh.vitals.trial",
+      "referenceName" : "7-day Trial",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "",
+    "_developerTeamID" : "X5H55SY52K",
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [ ]
+  },
+  "subscriptionGroups" : [ ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

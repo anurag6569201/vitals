@@ -31,7 +31,7 @@ Plus a compact live dashboard (CPU, memory, battery draw, disk, network, uptime)
 | Platform | `Vitals/Platform/` | `ProcessSampler` (libproc: per-app CPU, energy, memory, helpers rolled up into their app), `SystemSampler` (CPU, memory pressure, swap, thermal state, battery + watts, disk, network, power assertions), actions, presence (lock/sleep). |
 | App | `Vitals/App/` | `VitalsModel` (5 s sampling, 2 s while open, 10 s while away), status item, windows, settings persistence. |
 | UI | `Vitals/UI/` | SwiftUI popover, settings, onboarding. |
-| Licensing | `Vitals/Licensing/` | 14-day trial, Lemon Squeezy license keys (direct build) or StoreKit 2 (App Store build), update check. |
+| Licensing | `Vitals/Licensing/` | 7-day trial, Lemon Squeezy license keys (direct build) or StoreKit 2 (App Store build), update check. |
 
 ## Builds
 

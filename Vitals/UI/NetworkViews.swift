@@ -10,6 +10,7 @@ private let upColor = Color(red: 0.75, green: 0.42, blue: 1.0)
 /// Popover section: where your data went, today or over the last week or month.
 struct NetworkSection: View {
     @ObservedObject var tracker: NetworkUsageTracker
+    var hotspotLimitMB: Int? = nil
     let isPro: Bool
     let upgrade: () -> Void
     let openDetails: () -> Void
@@ -23,6 +24,11 @@ struct NetworkSection: View {
                 Spacer()
                 NetworkSpanPicker(span: $span, isPro: isPro, upgrade: upgrade)
                     .frame(width: 150)
+            }
+
+            if tracker.onMeteredConnection, let limitMB = hotspotLimitMB {
+                HotspotBanner(used: tracker.meteredBytes, limit: Double(limitMB) * 1_000_000)
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 14) {
@@ -64,6 +70,32 @@ struct NetworkSection: View {
             }
             .buttonStyle(.link)
         }
+    }
+}
+
+/// Shown while on an iPhone hotspot or other metered connection.
+private struct HotspotBanner: View {
+    let used: Double
+    let limit: Double
+
+    var body: some View {
+        let fraction = limit > 0 ? used / limit : 0
+        let tint: Color = fraction >= 1 ? .red : (fraction >= 0.8 ? .orange : .teal)
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Image(systemName: "personalhotspot").foregroundStyle(tint)
+                Text("On a hotspot").font(.system(size: 11.5, weight: .semibold))
+                Spacer()
+                Text("\(Format.bytes(UInt64(used))) of \(Format.bytes(UInt64(limit)))")
+                    .font(.system(size: 11, weight: .medium).monospacedDigit())
+                    .foregroundStyle(fraction >= 0.8 ? tint : .secondary)
+                    .contentTransition(.numericText())
+            }
+            AnimatedBar(value: fraction, tint: tint, height: 4)
+        }
+        .padding(8)
+        .background(tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .animation(Motion.spring, value: used)
     }
 }
 

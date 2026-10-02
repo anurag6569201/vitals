@@ -76,7 +76,7 @@ enum HotkeyChoice: String, Codable, CaseIterable, Identifiable {
 }
 
 enum ReadingKind: String, Codable, CaseIterable, Identifiable {
-    case cpu, gpu, memory, download, upload, disk, topApp, worldClock
+    case cpu, gpu, memory, download, upload, disk, topApp, display, ping, wifi, worldClock
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -87,6 +87,9 @@ enum ReadingKind: String, Codable, CaseIterable, Identifiable {
         case .upload: "Upload speed"
         case .disk: "Disk free"
         case .topApp: "Busiest app"
+        case .display: "Refresh rate (Hz)"
+        case .ping: "Ping"
+        case .wifi: "Wi‑Fi signal"
         case .worldClock: "Second time zone"
         }
     }
@@ -99,6 +102,9 @@ enum ReadingKind: String, Codable, CaseIterable, Identifiable {
         case .upload: "320 KB/s"
         case .disk: "84 GB"
         case .topApp: "45%"
+        case .display: "120 Hz"
+        case .ping: "24 ms"
+        case .wifi: "−58 dBm"
         case .worldClock: "NYC 9:41"
         }
     }
@@ -118,6 +124,9 @@ enum ReadingKind: String, Codable, CaseIterable, Identifiable {
         case .upload: "arrow.up"
         case .disk: "internaldrive"
         case .topApp: "app.fill"
+        case .display: "display"
+        case .ping: "stopwatch"
+        case .wifi: "wifi"
         case .worldClock: "globe"
         }
     }
@@ -168,6 +177,9 @@ struct AppSettings: Codable, Equatable {
     var colorReadingsWhenHigh = true
     /// The floating on-screen pin.
     var pin = PinSettings()
+    /// Count data on hotspots / metered connections and warn near the limit.
+    var hotspotGuard = true
+    var hotspotLimitMB = 2048
 
     init() {}
 
@@ -195,12 +207,14 @@ struct AppSettings: Codable, Equatable {
         readingColors = (try? c.decodeIfPresent([String: String].self, forKey: .readingColors)) ?? d.readingColors
         colorReadingsWhenHigh = (try? c.decodeIfPresent(Bool.self, forKey: .colorReadingsWhenHigh)) ?? d.colorReadingsWhenHigh
         pin = (try? c.decodeIfPresent(PinSettings.self, forKey: .pin)) ?? d.pin
+        hotspotGuard = (try? c.decodeIfPresent(Bool.self, forKey: .hotspotGuard)) ?? d.hotspotGuard
+        hotspotLimitMB = (try? c.decodeIfPresent(Int.self, forKey: .hotspotLimitMB)) ?? d.hotspotLimitMB
     }
 
     private enum CodingKeys: String, CodingKey {
         case detection, menuBarStyle, readings, notificationsEnabled, awayReportsEnabled, hasCompletedOnboarding
         case iconStyle, hiddenSections, hotkey, keepAwakeAllowsDisplaySleep, worldClockZone
-        case iconColorHex, readingTextColorHex, readingIconColorHex, readingColors, colorReadingsWhenHigh, pin
+        case iconColorHex, readingTextColorHex, readingIconColorHex, readingColors, colorReadingsWhenHigh, pin, hotspotGuard, hotspotLimitMB
     }
 
     private static let key = "vitals.settings.v2"

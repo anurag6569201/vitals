@@ -110,6 +110,24 @@ private struct AlertSettings: View {
                 }
             }
 
+            Section("Hotspot data guard") {
+                Toggle("Count data on hotspots and warn me near a limit", isOn: $model.settings.hotspotGuard)
+                if model.settings.hotspotGuard {
+                    Picker("Limit per hotspot session", selection: $model.settings.hotspotLimitMB) {
+                        ForEach([500, 1000, 2048, 5120, 10240], id: \.self) { mb in
+                            Text(mb >= 1000 ? "\(mb / 1024 == 0 ? 1 : mb / 1024) GB" : "\(mb) MB").tag(mb)
+                        }
+                    }
+                    if model.network.onMeteredConnection {
+                        Label("On a metered connection now · \(Format.bytes(UInt64(model.network.meteredBytes))) used",
+                              systemImage: "personalhotspot")
+                            .font(.caption).foregroundStyle(.orange)
+                    }
+                }
+                Text("macOS marks iPhone Personal Hotspot, tethering and Low Data Mode networks as metered. Vitals counts from the moment you join one and warns at 80% and 100% of your limit.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             if !Edition.isAppStore || !model.settings.detection.ignoredApps.isEmpty {
             Section("Ignored apps") {
                 if model.settings.detection.ignoredApps.isEmpty {
@@ -144,6 +162,12 @@ private struct AlertSettings: View {
 private struct ProSettings: View {
     @ObservedObject var license: LicenseManager
     @State private var key = ""
+    @State private var copied = false
+
+    static func masked(_ key: String) -> String {
+        guard key.count > 8 else { return key }
+        return String(key.prefix(11)) + String(repeating: "•", count: max(0, key.count - 15)) + String(key.suffix(4))
+    }
 
     var body: some View {
         Form {
@@ -195,16 +219,54 @@ private struct ProSettings: View {
                         Button("Buy Vitals Pro · \(license.priceText)") { NSWorkspace.shared.open(LicenseConfig.checkoutURL) }
                             .buttonStyle(.borderedProminent)
                         HStack {
-                            TextField("License key", text: $key)
+                            TextField("License key", text: $key, prompt: Text("VITALS-XXXX-XXXX-XXXX-XXXX or your purchase key"))
                                 .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
                             Button("Activate") { Task { await license.activate(key: key) } }
                                 .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty || license.isWorking)
                         }
+                        Text("Bought Vitals Pro in the Mac App Store? Paste the key from Vitals › Settings › Pro there. Each key works on one Mac at a time.")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             } else if !license.usesAppStore {
-                Section {
+                Section("License") {
+                    if let key = license.licenseKey {
+                        LabeledContent("Key", value: Self.masked(key))
+                            .font(.system(.body, design: .monospaced))
+                    }
                     Button("Remove License From This Mac") { Task { await license.deactivate() } }
+                        .disabled(license.isWorking)
+                    Text("Moving to a new Mac? Remove it here first, then activate the same key there.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            } else if LicenseConfig.licenseServerConfigured {
+                Section("Your license key") {
+                    if let key = license.appStoreKey {
+                        HStack {
+                            Text(key)
+                                .font(.system(.body, design: .monospaced).weight(.semibold))
+                                .textSelection(.enabled)
+                            Spacer()
+                            Button {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(key, forType: .string)
+                                copied = true
+                            } label: {
+                                Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                                    .contentTransition(.symbolEffect(.replace))
+                            }
+                        }
+                        Text("Your purchase also includes this key for Vitals Pro on one Mac outside the Mac App Store. Keep it somewhere safe.")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Button("Show My License Key") { Task { await license.claimLicenseKey() } }
+                            .disabled(license.isWorking)
+                        Text("Your purchase includes one license key for using Vitals Pro on a Mac outside the Mac App Store.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
             }
 

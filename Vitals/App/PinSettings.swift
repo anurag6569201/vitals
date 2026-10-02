@@ -3,17 +3,43 @@ import Foundation
 
 /// What the on-screen pin can show.
 enum PinItem: String, Codable, CaseIterable, Identifiable {
-    case cpu, gpu, memory, battery, disk, network, worldClock
+    case cpu, gpu, memory, swap, battery, power, batteryHealth, disk, diskIO,
+         network, dataToday, wifi, ping, display, uptime, worldClock
     var id: String { rawValue }
+
+    /// Groups for the Settings picker, so a long list stays easy to scan.
+    enum Group: String, CaseIterable {
+        case performance = "Performance", power = "Battery & power", storage = "Storage",
+             network = "Network", display = "Display & time"
+    }
+
+    var group: Group {
+        switch self {
+        case .cpu, .gpu, .memory, .swap: .performance
+        case .battery, .power, .batteryHealth: .power
+        case .disk, .diskIO: .storage
+        case .network, .dataToday, .wifi, .ping: .network
+        case .display, .uptime, .worldClock: .display
+        }
+    }
 
     var title: String {
         switch self {
         case .cpu: "CPU"
         case .gpu: "GPU"
         case .memory: "Memory"
+        case .swap: "Swap used"
         case .battery: "Battery"
+        case .power: "Power draw"
+        case .batteryHealth: "Battery health"
         case .disk: "Disk free"
-        case .network: "Network"
+        case .diskIO: "Disk activity"
+        case .network: "Network speed"
+        case .dataToday: "Data today"
+        case .wifi: "Wi‑Fi signal"
+        case .ping: "Ping"
+        case .display: "Refresh rate"
+        case .uptime: "Uptime"
         case .worldClock: "World clock"
         }
     }
@@ -23,9 +49,18 @@ enum PinItem: String, Codable, CaseIterable, Identifiable {
         case .cpu: "CPU"
         case .gpu: "GPU"
         case .memory: "Memory"
+        case .swap: "Swap"
         case .battery: "Battery"
+        case .power: "Power"
+        case .batteryHealth: "Health"
         case .disk: "Free"
+        case .diskIO: "Disk"
         case .network: "Network"
+        case .dataToday: "Today"
+        case .wifi: "Wi‑Fi"
+        case .ping: "Ping"
+        case .display: "Display"
+        case .uptime: "Uptime"
         case .worldClock: "Clock"
         }
     }
@@ -35,25 +70,39 @@ enum PinItem: String, Codable, CaseIterable, Identifiable {
         case .cpu: "cpu"
         case .gpu: "square.3.layers.3d"
         case .memory: "memorychip"
+        case .swap: "arrow.left.arrow.right.square"
         case .battery: "battery.75percent"
+        case .power: "bolt"
+        case .batteryHealth: "heart.text.square"
         case .disk: "internaldrive"
+        case .diskIO: "externaldrive.badge.timemachine"
         case .network: "arrow.up.arrow.down"
+        case .dataToday: "chart.bar.xaxis"
+        case .wifi: "wifi"
+        case .ping: "stopwatch"
+        case .display: "display"
+        case .uptime: "clock.arrow.circlepath"
         case .worldClock: "globe"
         }
     }
 
-    /// Default accent for colorful icons.
+    /// Default accent when "color-code each reading" is on.
     var tintHex: String {
         switch self {
         case .cpu: "#0A84FF"
         case .gpu: "#FF375F"
-        case .memory: "#BF5AF2"
-        case .battery: "#30D158"
-        case .disk: "#00C7BE"
-        case .network: "#5E5CE6"
-        case .worldClock: "#64D2FF"
+        case .memory, .swap: "#BF5AF2"
+        case .battery, .power, .batteryHealth: "#30D158"
+        case .disk, .diskIO: "#00C7BE"
+        case .network, .dataToday: "#5E5CE6"
+        case .wifi, .ping: "#64D2FF"
+        case .display: "#FF9F0A"
+        case .uptime, .worldClock: "#8E8E93"
         }
     }
+
+    /// The only reading that sends anything over the network (a connection-time check).
+    var needsNetwork: Bool { self == .ping }
 }
 
 /// The pin's overall form. Researched patterns: floating cards (widgets), flush edge docks
@@ -87,6 +136,62 @@ enum PinShape: String, Codable, CaseIterable, Identifiable {
         case .dock: 0
         case .text: 6
         default: 8
+        }
+    }
+}
+
+/// One-click starting points, so nobody has to tune ten settings.
+enum PinPreset: String, CaseIterable, Identifiable {
+    case minimal, gamer, laptop, network, creator, dashboard
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .minimal: "Minimal"
+        case .gamer: "Gamer"
+        case .laptop: "On the go"
+        case .network: "Network"
+        case .creator: "Creator"
+        case .dashboard: "Dashboard"
+        }
+    }
+    var subtitle: String {
+        switch self {
+        case .minimal: "CPU in a slim edge dock"
+        case .gamer: "Refresh rate, ping, CPU, GPU — overlay text"
+        case .laptop: "Battery, power draw, time left"
+        case .network: "Speed, data today, Wi‑Fi, ping"
+        case .creator: "Memory, swap, disk activity, GPU"
+        case .dashboard: "Everything important, as meters"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .minimal: "minus.rectangle"
+        case .gamer: "gamecontroller"
+        case .laptop: "laptopcomputer"
+        case .network: "network"
+        case .creator: "paintbrush.pointed"
+        case .dashboard: "gauge.with.dots.needle.67percent"
+        }
+    }
+    var isPro: Bool { self != .minimal }
+
+    func apply(to pin: inout PinSettings) {
+        switch self {
+        case .minimal:
+            pin.items = [.cpu]; pin.shape = .dock; pin.theme = .auto; pin.autoHide = false
+        case .gamer:
+            pin.items = [.display, .ping, .cpu, .gpu]; pin.shape = .text; pin.layout = .column
+            pin.position.h = .start; pin.position.v = .start
+        case .laptop:
+            pin.items = [.battery, .power, .batteryHealth]; pin.shape = .pill; pin.theme = .auto; pin.layout = .auto
+        case .network:
+            pin.items = [.network, .dataToday, .wifi, .ping]; pin.shape = .dock; pin.theme = .nord
+        case .creator:
+            pin.items = [.memory, .swap, .diskIO, .gpu]; pin.shape = .card; pin.theme = .graphite; pin.showGauges = true
+        case .dashboard:
+            pin.items = [.cpu, .gpu, .memory, .battery, .disk, .network]; pin.shape = .bars; pin.theme = .graphite
+            pin.layout = .column
         }
     }
 }
@@ -226,6 +331,18 @@ struct PinSettings: Codable, Equatable {
     var shape: PinShape = .dock
     /// Edge Dock only: shrink to a slim tab on the edge until the pointer comes near.
     var autoHide = false
+
+    /// What a free user gets: one reading in the Edge Dock with the Auto theme —
+    /// enough to feel how good it is. Pro unlocks every reading, shape and theme.
+    func freeTier() -> PinSettings {
+        var p = self
+        p.items = Array(items.prefix(1))
+        if p.items.isEmpty { p.items = [.cpu] }
+        p.shape = .dock
+        p.theme = .auto
+        p.colorfulIcons = false
+        return p
+    }
 
     var isColumn: Bool {
         switch layout {

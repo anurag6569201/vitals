@@ -50,10 +50,11 @@ final class PinnedPanelController: NSObject, NSWindowDelegate {
             .store(in: &cancellables)
     }
 
-    private var pin: PinSettings { model.settings.pin }
+    /// Free users get one reading in the Edge Dock; Pro gets everything.
+    private var pin: PinSettings { model.license.isPro ? model.settings.pin : model.settings.pin.freeTier() }
 
     private func update() {
-        guard pin.enabled && model.license.isPro else {
+        guard pin.enabled else {
             panel?.orderOut(nil)
             return
         }
@@ -353,6 +354,18 @@ final class PinnedPanelController: NSObject, NSWindowDelegate {
             })
         }
         menu.addItem(MenuAction.submenu("Position", place))
+
+        let presets = NSMenu()
+        for preset in PinPreset.allCases {
+            presets.addItem(MenuAction.item(preset.title + (preset.isPro && !model.license.isPro ? " (Pro)" : "")) { [weak self] in
+                guard let self else { return }
+                if preset.isPro && !self.model.license.isPro { self.openSettings(); return }
+                var updated = self.model.settings.pin
+                preset.apply(to: &updated)
+                self.model.settings.pin = updated
+            })
+        }
+        menu.addItem(MenuAction.submenu("Presets", presets))
 
         let shapes = NSMenu()
         for shape in PinShape.allCases {

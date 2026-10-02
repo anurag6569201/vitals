@@ -349,6 +349,43 @@ struct PinReading {
         case .worldClock:
             let zone = model.settings.worldClockZone
             return PinReading(value: WorldClock.time(in: zone), detail: WorldClock.label(for: zone), symbol: item.symbol)
+        case .swap:
+            let gb = Double(snap.swapUsedBytes) / 1_000_000_000
+            return PinReading(value: Format.bytes(snap.swapUsedBytes),
+                              alert: gb > 8 ? .critical : (gb > 3 ? .warn : nil), symbol: item.symbol)
+        case .power:
+            guard let b = snap.battery else { return PinReading(value: "AC", symbol: "powerplug") }
+            if b.isOnAC { return PinReading(value: b.isCharging ? "Charging" : "AC", symbol: b.isCharging ? "bolt.fill" : "powerplug") }
+            guard let w = b.dischargeWatts else { return PinReading(value: "—", symbol: item.symbol) }
+            return PinReading(value: Format.watts(w), alert: w > 30 ? .critical : (w > 18 ? .warn : nil), symbol: item.symbol)
+        case .batteryHealth:
+            guard let h = snap.battery?.health else { return PinReading(value: "—", symbol: item.symbol) }
+            return PinReading(value: Format.percent(h), detail: snap.battery?.cycleCount.map { "\($0) cycles" },
+                              fraction: h, alert: h < 0.7 ? .critical : (h < 0.8 ? .warn : nil), symbol: item.symbol)
+        case .diskIO:
+            let extra = model.extra
+            return PinReading(value: "R " + Format.rate(extra.diskRead), detail: "W " + Format.rate(extra.diskWrite),
+                              symbol: item.symbol)
+        case .dataToday:
+            let today = model.network.total(.today)
+            return PinReading(value: Format.bytes(UInt64(today.total)), detail: "↓ " + Format.bytes(UInt64(today.down)),
+                              symbol: item.symbol)
+        case .wifi:
+            guard let rssi = model.extra.wifiRSSI else { return PinReading(value: "Off", symbol: "wifi.slash") }
+            let fraction = min(max(Double(rssi + 90) / 60, 0), 1)
+            return PinReading(value: "\(rssi) dBm", detail: ExtraStats.quality(rssi: rssi), fraction: fraction,
+                              alert: rssi < -82 ? .critical : (rssi < -75 ? .warn : nil), symbol: item.symbol)
+        case .ping:
+            guard let ms = model.extra.pingMs else { return PinReading(value: "—", symbol: item.symbol) }
+            return PinReading(value: "\(Int(ms.rounded())) ms", alert: ms > 250 ? .critical : (ms > 100 ? .warn : nil),
+                              symbol: item.symbol)
+        case .display:
+            guard let hz = model.extra.refreshHz else { return PinReading(value: "—", symbol: item.symbol) }
+            let maxHz = model.extra.maxRefreshHz ?? hz
+            return PinReading(value: "\(hz) Hz", detail: maxHz > hz ? "up to \(maxHz)" : nil, symbol: item.symbol)
+        case .uptime:
+            return PinReading(value: Format.duration(snap.uptime), detail: "since restart",
+                              alert: snap.uptime > 21 * 86_400 ? .warn : nil, symbol: item.symbol)
         }
     }
 }
