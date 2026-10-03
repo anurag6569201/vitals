@@ -1,5 +1,6 @@
 import Combine
 import CryptoKit
+import AppKit
 import Foundation
 import IOKit
 import StoreKit
@@ -51,6 +52,7 @@ final class LicenseManager: ObservableObject {
 
     private let defaults = UserDefaults.standard
     private var updatesTask: Task<Void, Never>?
+    private var entitlementRecheck: AnyCancellable?
 
     private enum Keys {
         static let firstLaunch = "vitals.license.firstLaunch"
@@ -89,6 +91,13 @@ final class LicenseManager: ObservableObject {
             }
             refreshStoreEntitlement()
             Task { await loadProduct() }
+            // Refunds and revocations don't always arrive through Transaction.updates while the app
+            // is running, so re-check entitlements whenever a Vitals window (popover, Settings)
+            // comes forward, at most once a minute.
+            entitlementRecheck = NotificationCenter.default
+                .publisher(for: NSWindow.didBecomeKeyNotification)
+                .throttle(for: .seconds(60), scheduler: RunLoop.main, latest: false)
+                .sink { [weak self] _ in Task { @MainActor in self?.refreshStoreEntitlement() } }
         } else {
             revalidateIfNeeded()
         }
@@ -296,7 +305,12 @@ final class LicenseManager: ObservableObject {
     // MARK: Mac App Store
 
     func loadProduct() async {
-        storeProduct = try? await Product.products(for: [LicenseConfig.storeKitProductID]).first
+        do {
+            storeProduct = try await Product.products(for: [LicenseConfig.storeKitProductID]).first
+            if storeProduct == nil { NSLog("Vitals StoreKit: no product returned for %@", LicenseConfig.storeKitProductID) }
+        } catch {
+            NSLog("Vitals StoreKit: products request failed: %@", String(describing: error))
+        }
     }
 
     func purchase() async {
@@ -331,8 +345,26 @@ final class LicenseManager: ObservableObject {
     func startTrial() async {
         isWorking = true
         defer { isWorking = false }
-        guard let product = try? await Product.products(for: [LicenseConfig.storeKitTrialProductID]).first else {
+        let product: Product
+        do {
+            let found = try await Product.products(for: [LicenseConfig.storeKitTrialProductID])
+            guard let first = found.first else {
+                NSLog("Vitals StoreKit: no product returned for %@", LicenseConfig.storeKitTrialProductID)
+                #if DEBUG
+                message = "DEBUG: App Store returned no product for \(LicenseConfig.storeKitTrialProductID)."
+                #else
+                message = "The App Store isn't available right now."
+                #endif
+                return
+            }
+            product = first
+        } catch {
+            NSLog("Vitals StoreKit: products request failed: %@", String(describing: error))
+            #if DEBUG
+            message = "DEBUG: \(String(describing: error))"
+            #else
             message = "The App Store isn't available right now."
+            #endif
             return
         }
         do {
@@ -416,6 +448,10 @@ final class LicenseManager: ObservableObject {
                 guard case .verified(let transaction) = entitlement, transaction.revocationDate == nil else { continue }
                 if transaction.productID == LicenseConfig.storeKitProductID { owned = true }
                 if transaction.productID == LicenseConfig.storeKitTrialProductID { trialStart = transaction.purchaseDate }
+            }
+            if !owned && defaults.bool(forKey: Keys.storePro) {
+                // Was owned until now (refund or revocation): drop the stale "Thank you" note.
+                message = nil
             }
             if !owned {
                 // No longer owned (e.g. Apple reversed the purchase): forget the key shown in Settings.
