@@ -250,6 +250,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Vitals looks for large and old files on your Desktop that you might want to clear. Nothing leaves your Mac, and files are only moved to the Trash when you choose.";
 				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "Vitals looks for large files in Documents that you might want to clear. Nothing leaves your Mac, and files are only moved to the Trash when you choose.";
@@ -287,6 +288,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Vitals looks for large and old files on your Desktop that you might want to clear. Nothing leaves your Mac, and files are only moved to the Trash when you choose.";
 				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "Vitals looks for large files in Documents that you might want to clear. Nothing leaves your Mac, and files are only moved to the Trash when you choose.";
@@ -445,6 +447,7 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Vitals looks for large and old files on your Desktop that you might want to clear. Nothing leaves your Mac, and files are only moved to the Trash when you choose.";
 				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "Vitals looks for large files in Documents that you might want to clear. Nothing leaves your Mac, and files are only moved to the Trash when you choose.";
@@ -484,6 +487,7 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Vitals looks for large and old files on your Desktop that you might want to clear. Nothing leaves your Mac, and files are only moved to the Trash when you choose.";
 				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "Vitals looks for large files in Documents that you might want to clear. Nothing leaves your Mac, and files are only moved to the Trash when you choose.";
