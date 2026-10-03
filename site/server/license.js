@@ -63,6 +63,13 @@ export async function getLicenseForPurchase(db, originalTransactionId) {
   return db.prepare('SELECT * FROM licenses WHERE original_transaction_id = ?').bind(originalTransactionId).first();
 }
 
+/** Keys from sandbox (test) purchases cost nothing, so they only work for a short while. */
+export const SANDBOX_KEY_DAYS = 14;
+export function isExpiredTestKey(record) {
+  if (!record || record.environment !== 'Sandbox') return false;
+  return Date.now() - new Date(record.created).getTime() > SANDBOX_KEY_DAYS * 86_400_000;
+}
+
 export async function isActivated(db, key, machine) {
   const row = await db.prepare('SELECT 1 AS ok FROM activations WHERE key = ? AND machine = ?').bind(key, machine).first();
   return !!row;

@@ -96,10 +96,13 @@ final class LicenseManager: ObservableObject {
 
     func refreshState() {
         #if DEBUG && APPSTORE
-        // Testing the App Store edition from Xcode: Pro is unlocked. Never in archived builds
-        // (the AppStore configuration has no DEBUG flag).
-        state = .pro
-        #else
+        // Testing the App Store edition from Xcode: launch with `-forcePro` to unlock Pro without
+        // a purchase. Never in archived builds (the AppStore configuration has no DEBUG flag).
+        if ProcessInfo.processInfo.arguments.contains("-forcePro") {
+            state = .pro
+            return
+        }
+        #endif
         let owned = usesAppStore ? defaults.bool(forKey: Keys.storePro) : hasValidDirectLicense
         if owned {
             state = .pro
@@ -114,7 +117,6 @@ final class LicenseManager: ObservableObject {
         let used = Int(Date().timeIntervalSince(first) / 86_400)
         let left = LicenseConfig.trialDays - used
         state = left > 0 ? .trial(daysLeft: left) : .free
-        #endif
     }
 
     var priceText: String { storeProduct?.displayPrice ?? LicenseConfig.displayPrice }

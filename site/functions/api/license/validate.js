@@ -7,6 +7,7 @@ export const onRequest = L.endpoint(async ({ key: rawKey, machine: rawMachine },
   const record = await L.getLicense(env.DB, key);
   if (!record) return [200, { valid: false, reason: 'unknown_key' }];
   if (record.revoked) return [200, { valid: false, reason: 'revoked' }];
+  if (L.isExpiredTestKey(record)) return [200, { valid: false, reason: 'test_key_expired' }];
   if (!(await L.isActivated(env.DB, key, machine))) return [200, { valid: false, reason: 'not_activated' }];
   return [200, { valid: true }];
 });

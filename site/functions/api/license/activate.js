@@ -8,6 +8,7 @@ export const onRequest = L.endpoint(async ({ key: rawKey, machine: rawMachine, n
   const record = await L.getLicense(env.DB, key);
   if (!record) throw L.fail(404, 'unknown_key', 'That license key wasn’t found. Check for typos.');
   if (record.revoked) throw L.fail(403, 'revoked', 'This key is no longer valid. Contact support if this looks wrong.');
+  if (L.isExpiredTestKey(record)) throw L.fail(403, 'test_key_expired', 'This key came from a test purchase and has expired.');
 
   if (!(await L.isActivated(env.DB, key, machine))) {
     // One statement, so two Macs activating at once can't both get in.
