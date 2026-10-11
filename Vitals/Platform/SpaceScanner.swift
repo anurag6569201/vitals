@@ -169,10 +169,7 @@ enum SpaceAccess {
         if let left = fileIdentifier(url), let right = fileIdentifier(realHome), left.isEqual(right) {
             return true
         }
-        let homePaths = folderPathKeys(realHome)
-        return folderPathKeys(url).contains { candidate in
-            homePaths.contains { candidate.hasPrefix($0) }
-        }
+        return !folderPathKeys(url).isDisjoint(with: folderPathKeys(realHome))
     }
 
     private static func fileIdentifier(_ url: URL) -> (any NSObjectProtocol)? {
