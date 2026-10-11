@@ -111,7 +111,13 @@ enum SpaceAccess {
         var stale = false
         guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope,
                                  relativeTo: nil, bookmarkDataIsStale: &stale),
-              url.startAccessingSecurityScopedResource() else { return false }
+              url.standardizedFileURL.resolvingSymlinksInPath().path
+                == realHome.standardizedFileURL.resolvingSymlinksInPath().path,
+              url.startAccessingSecurityScopedResource() else {
+            // A folder other than home was chosen earlier: forget it so Vitals asks again.
+            UserDefaults.standard.removeObject(forKey: bookmarkKey)
+            return false
+        }
         accessed = url
         if stale, let fresh = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil,
                                                     relativeTo: nil) {
@@ -131,13 +137,29 @@ enum SpaceAccess {
         panel.prompt = "Allow"
         panel.message = "Choose your home folder (\(realHome.lastPathComponent)) so Vitals can look for files you can clear. Nothing leaves your Mac."
         NSApp.activate()
-        guard panel.runModal() == .OK, let url = panel.url,
-              let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
-        else { return false }
-        accessed?.stopAccessingSecurityScopedResource()
-        accessed = nil
-        UserDefaults.standard.set(data, forKey: bookmarkKey)
-        return restore()
+        while true {
+            guard panel.runModal() == .OK, let url = panel.url else { return false }
+            // Space Map and the scans start at the home folder, so a subfolder (e.g. Documents) isn't enough.
+            guard url.standardizedFileURL.resolvingSymlinksInPath().path
+                    == realHome.standardizedFileURL.resolvingSymlinksInPath().path else {
+                let alert = NSAlert()
+                alert.messageText = "Please choose your home folder"
+                alert.informativeText = "Vitals needs the \"\(realHome.lastPathComponent)\" folder itself (it contains Desktop, Documents and Downloads), not a folder inside it."
+                alert.addButton(withTitle: "Choose Again")
+                alert.addButton(withTitle: "Cancel")
+                if alert.runModal() == .alertFirstButtonReturn {
+                    panel.directoryURL = realHome
+                    continue
+                }
+                return false
+            }
+            guard let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil,
+                                                   relativeTo: nil) else { return false }
+            accessed?.stopAccessingSecurityScopedResource()
+            accessed = nil
+            UserDefaults.standard.set(data, forKey: bookmarkKey)
+            return restore()
+        }
     }
     // Removing apps: sandboxed builds also need the person to choose the Applications folder once.
     private static let appsBookmarkKey = "vitals.space.applicationsBookmark"
