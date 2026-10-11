@@ -110,11 +110,15 @@ enum SpaceAccess {
         guard accessed == nil, let data = UserDefaults.standard.data(forKey: bookmarkKey) else { return accessed != nil }
         var stale = false
         guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope,
-                                 relativeTo: nil, bookmarkDataIsStale: &stale),
-              url.standardizedFileURL.resolvingSymlinksInPath().path
-                == realHome.standardizedFileURL.resolvingSymlinksInPath().path,
-              url.startAccessingSecurityScopedResource() else {
-            // A folder other than home was chosen earlier: forget it so Vitals asks again.
+                                 relativeTo: nil, bookmarkDataIsStale: &stale) else {
+            UserDefaults.standard.removeObject(forKey: bookmarkKey)
+            return false
+        }
+        // Resolve the folder only after the security scope is active. A failed start is left
+        // in place so a later launch can try the same bookmark again.
+        guard url.startAccessingSecurityScopedResource() else { return false }
+        guard isHomeFolder(url) else {
+            url.stopAccessingSecurityScopedResource()
             UserDefaults.standard.removeObject(forKey: bookmarkKey)
             return false
         }
@@ -129,28 +133,25 @@ enum SpaceAccess {
     /// Shows the standard folder picker, opened on the home folder.
     @discardableResult
     static func request() -> Bool {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.directoryURL = realHome
-        panel.prompt = "Allow"
-        panel.message = "Choose your home folder (\(realHome.lastPathComponent)) so Vitals can look for files you can clear. Nothing leaves your Mac."
         NSApp.activate()
         while true {
+            // A new panel each time, so a rejected subfolder isn't still selected on the next try.
+            let panel = NSOpenPanel()
+            panel.canChooseDirectories = true
+            panel.canChooseFiles = false
+            panel.allowsMultipleSelection = false
+            panel.directoryURL = realHome
+            panel.prompt = "Allow"
+            panel.message = "Choose your home folder (\(realHome.lastPathComponent)) so Vitals can look for files you can clear. Nothing leaves your Mac."
             guard panel.runModal() == .OK, let url = panel.url else { return false }
             // Space Map and the scans start at the home folder, so a subfolder (e.g. Documents) isn't enough.
-            guard url.standardizedFileURL.resolvingSymlinksInPath().path
-                    == realHome.standardizedFileURL.resolvingSymlinksInPath().path else {
+            guard isHomeFolder(url) else {
                 let alert = NSAlert()
                 alert.messageText = "Please choose your home folder"
                 alert.informativeText = "Vitals needs the \"\(realHome.lastPathComponent)\" folder itself (it contains Desktop, Documents and Downloads), not a folder inside it."
                 alert.addButton(withTitle: "Choose Again")
                 alert.addButton(withTitle: "Cancel")
-                if alert.runModal() == .alertFirstButtonReturn {
-                    panel.directoryURL = realHome
-                    continue
-                }
+                if alert.runModal() == .alertFirstButtonReturn { continue }
                 return false
             }
             guard let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil,
@@ -160,6 +161,39 @@ enum SpaceAccess {
             UserDefaults.standard.set(data, forKey: bookmarkKey)
             return restore()
         }
+    }
+
+    /// The open panel and a saved bookmark can name the same home folder with different strings
+    /// (`/Users/Name` vs `/Users/name`, or a `/System/Volumes/Data` firmlink). Compare identity first.
+    private static func isHomeFolder(_ url: URL) -> Bool {
+        if let left = fileIdentifier(url), let right = fileIdentifier(realHome), left.isEqual(right) {
+            return true
+        }
+        return !folderPathKeys(url).isDisjoint(with: folderPathKeys(realHome))
+    }
+
+    private static func fileIdentifier(_ url: URL) -> (any NSObjectProtocol)? {
+        try? url.resourceValues(forKeys: [.fileResourceIdentifierKey]).fileResourceIdentifier as? any NSObjectProtocol
+    }
+
+    private static func folderPathKeys(_ url: URL) -> Set<String> {
+        var paths = [url.path, url.standardizedFileURL.resolvingSymlinksInPath().path]
+        if let canonical = try? url.resourceValues(forKeys: [.canonicalPathKey]).canonicalPath {
+            paths.append(canonical)
+        }
+        return Set(paths.map(normalizeFolderPath))
+    }
+
+    private static func normalizeFolderPath(_ path: String) -> String {
+        var path = (path as NSString).standardizingPath
+        let dataPrefix = "/System/Volumes/Data"
+        if path == dataPrefix {
+            path = "/"
+        } else if path.hasPrefix(dataPrefix + "/") {
+            path = String(path.dropFirst(dataPrefix.count))
+        }
+        if path.count > 1, path.hasSuffix("/") { path.removeLast() }
+        return path.precomposedStringWithCanonicalMapping.lowercased()
     }
     // Removing apps: sandboxed builds also need the person to choose the Applications folder once.
     private static let appsBookmarkKey = "vitals.space.applicationsBookmark"
