@@ -21,7 +21,7 @@ struct BatteryForecast: Equatable {
     static let appPortion = 0.6
     static let floorRate = 3.0
 
-    var emptyAt: Date { now.addingTimeInterval(level * 100 / ratePerHour * 3600) }
+    var emptyAt: Date { now.addingTimeInterval(level / ratePerHour * 3600) }
 
     /// Low Power Mode dims the screen a little and limits boost and background work. A conservative
     /// estimate is that it trims about a fifth of the drain; Vitals always says "about".
